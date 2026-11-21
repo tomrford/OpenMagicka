@@ -39,6 +39,12 @@
           ++ lib.optionals isDarwin (patchesIn ./native/patches/MojoShader-macos);
         fna3dPatches = lib.optionals isDarwin (patchesIn ./native/patches/FNA3D-macos);
 
+        # Our FAudio: nixpkgs' with our FACT fixes (native/README.md).
+        faudio = pkgs.faudio.overrideAttrs (old: {
+          pname = "faudio-openmagicka";
+          patches = (old.patches or []) ++ patchesIn ./native/patches/FAudio;
+        });
+
         fna3d = pkgs.stdenv.mkDerivation {
           pname = "fna3d-openmagicka";
           version = "26.10";
@@ -85,7 +91,7 @@
             app=$out/lib/openmagicka
             ln -s ${fna3d}/lib/${native "FNA3D"} $app/
             ln -s ${lib.getLib pkgs.sdl3}/lib/${native "SDL3"} $app/
-            ln -s ${pkgs.faudio}/lib/${native "FAudio"} $app/
+            ln -s ${faudio}/lib/${native "FAudio"} $app/
             {
               echo "OpenMagicka build of FNA3D (altered source: see native/README.md), built by flake.nix."
               echo "${native "FNA3D"} sha256 $(sha256sum "$app/${native "FNA3D"}" | cut -d' ' -f1)"
@@ -97,7 +103,7 @@
       in {
         packages = {
           default = openmagicka;
-          inherit openmagicka fna3d;
+          inherit openmagicka fna3d faudio;
         };
 
         apps.default = flake-utils.lib.mkApp {drv = openmagicka;};

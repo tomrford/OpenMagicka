@@ -37,3 +37,15 @@ it as `FNA3D.OpenMagicka.txt`; the game takes FNA3D for ours only when the DLL's
 record (`GraphicsDriver.HasOwnFna3d`), so a stock FNA3D in its place keeps the stock defaults. On other platforms it uses
 the stock FNA3D and defaults to the OpenGL driver, which the original effects need there
 (`GraphicsDriver`, docs/engine/ARCHITECTURE.md §3.2).
+
+## FAudio
+
+`patches/FAudio/*.patch` are applied to FAudio (`lib/FNA/lib/FAudio` and, in `flake.nix`, nixpkgs'
+FAudio), under the same terms as above.
+
+| Patch | What it fixes |
+|---|---|
+| `0001-interactive-cue-sound-on-play.patch` | All platforms: XACT interactive cues (the spells' sprays, beams, shields, burning, wet and frozen loops) were silent, as FACT chose their sound only when their variable changed after they were played |
+
+The flake builds it on macOS and Linux. The Windows build and the fetched fnalibs still have the
+stock FAudio.

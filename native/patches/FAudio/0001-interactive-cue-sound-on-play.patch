@@ -1,0 +1,37 @@
+OpenMagicka fork: an interactive cue (one whose sound is chosen by a variable's value) got no
+sound when it was played, only once that variable later changed from its initial value. Magicka's
+sprays, beams, shields and status loops are interactive on a global that the game never changes,
+so they were silent while reporting themselves as playing. The cue now chooses its sound as it
+starts, by the variable's value then.
+
+diff --git a/src/FACT.c b/src/FACT.c
+index ae299fb..f26a4ea 100644
+--- a/src/FACT.c
++++ b/src/FACT.c
+@@ -2339,6 +2339,26 @@ uint32_t FACTCue_Play(FACTCue *pCue)
+ 		return FACTENGINE_E_INVALIDUSAGE;
+ 	}
+ 
++	/* An interactive cue picks its sound by its variable's value as it
++	 * starts, as XACT does, not only once that value changes. */
++	if (	pCue->playingSound == NULL &&
++		pCue->simpleWave == NULL &&
++		pCue->variation != NULL &&
++		pCue->variation->type == VARIATION_TABLE_TYPE_INTERACTIVE	)
++	{
++		FACTAudioEngine *engine = pCue->parentBank->parentEngine;
++		uint16_t variable = pCue->variation->variable;
++		if (engine->variables[variable].accessibility & ACCESSIBILITY_CUE)
++		{
++			FACTCue_GetVariable(pCue, variable, &pCue->interactive);
++		}
++		else
++		{
++			FACTAudioEngine_GetGlobalVariable(engine, variable, &pCue->interactive);
++		}
++		create_sound(pCue);
++	}
++
+ 	if (!play_sound(pCue))
+ 	{
+ 		FAudio_PlatformUnlockMutex(
