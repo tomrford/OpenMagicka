@@ -43,7 +43,8 @@
     <None Include="$(FnaLibs)osx/*.dylib" CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
-  <Target Name="CheckFnaLibs" BeforeTargets="Build" Condition="!Exists('$(FnaLibs)')">
+  <!-- NativeTarget=none: the natives come from elsewhere (flake.nix puts its own beside the app). -->
+  <Target Name="CheckFnaLibs" BeforeTargets="Build" Condition="!Exists('$(FnaLibs)') And '$(NativeTarget)' != 'none'">
     <Error Text="FNA native libraries are missing: run tools/fetch_fnalibs.sh" />
   </Target>
 

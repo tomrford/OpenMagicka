@@ -18,3 +18,6 @@ artifacts/
 # local game assets and tooling (never committed)
 assets/
 .local/
+
+# nix build output
+result

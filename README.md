@@ -56,6 +56,11 @@ Studio's C++ tools and CMake needed).
 
 Tests that need the game files run when `MAGICKA_DIR` points at a Magicka installation.
 
+On macOS (Apple Silicon) and Linux, `flake.nix` builds everything with a pinned toolchain, our
+FNA3D included: `nix run .` plays (with `MAGICKA_DIR` set or `--content`), `nix develop` gives
+the .NET SDK, CMake and ffmpeg for the commands above. On macOS the launcher picks OpenGL;
+`FNA3D_FORCE_DRIVER=Metal` tries Metal, which still draws some models wrong.
+
 ## Download
 
 Testers' builds for Windows and Linux are on the [releases page](https://github.com/vogster/OpenMagicka/releases):

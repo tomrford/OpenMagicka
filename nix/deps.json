@@ -1,0 +1,62 @@
+[
+  {
+    "pname": "Jitter2",
+    "version": "2.13.0",
+    "hash": "sha256-8kFvuLazijv8x6lSRbB0XJhaPP6PXUlJRzUWinBZpAc="
+  },
+  {
+    "pname": "Microsoft.AspNetCore.App.Ref",
+    "version": "8.0.33",
+    "hash": "sha256-eC4NCkKUEA2AaRlfi447UrGstFKy85zx3j17NMTdcHw="
+  },
+  {
+    "pname": "Microsoft.AspNetCore.App.Runtime.linux-arm64",
+    "version": "8.0.33",
+    "hash": "sha256-6YCSfQj+K4ARdT7EE7IxixdcOtJqXfDqC+OUQevXbnI="
+  },
+  {
+    "pname": "Microsoft.AspNetCore.App.Runtime.linux-x64",
+    "version": "8.0.33",
+    "hash": "sha256-6Fyns6E4os6WmK6gcogQl7L8SEvnK86gNDwtmbGUZKI="
+  },
+  {
+    "pname": "Microsoft.AspNetCore.App.Runtime.osx-arm64",
+    "version": "8.0.33",
+    "hash": "sha256-oZhxxpcg6zgG/T8F7ENW6LXTE/QeWopVimYsEXAsAug="
+  },
+  {
+    "pname": "Microsoft.NETCore.App.Host.linux-arm64",
+    "version": "8.0.33",
+    "hash": "sha256-j54ZLqoSbGJu6SioULm0VRJwK+4dYO9eNJE0GTgAgwU="
+  },
+  {
+    "pname": "Microsoft.NETCore.App.Host.linux-x64",
+    "version": "8.0.33",
+    "hash": "sha256-RIRrs9NI/sIj7Rce9zOhn7ZDcGLi4uZLvDwd6szv7h4="
+  },
+  {
+    "pname": "Microsoft.NETCore.App.Host.osx-arm64",
+    "version": "8.0.33",
+    "hash": "sha256-CkzkKAk3BTNIbrbtZzMJ/JQ4S92LqnraTSNxi4kQKjE="
+  },
+  {
+    "pname": "Microsoft.NETCore.App.Ref",
+    "version": "8.0.33",
+    "hash": "sha256-FU1+KthdcxBhoVP23AsUofPQXeB5BUdXH2q/PFVuZC4="
+  },
+  {
+    "pname": "Microsoft.NETCore.App.Runtime.linux-arm64",
+    "version": "8.0.33",
+    "hash": "sha256-5gOIBQcHhVFsZQnsQ6LiQpT5dQ0PX12xAi2hZFmSyGc="
+  },
+  {
+    "pname": "Microsoft.NETCore.App.Runtime.linux-x64",
+    "version": "8.0.33",
+    "hash": "sha256-2xa/T/ah2Q3ROUs52/lyON6LEBYwH2y1dJETJPOFF0A="
+  },
+  {
+    "pname": "Microsoft.NETCore.App.Runtime.osx-arm64",
+    "version": "8.0.33",
+    "hash": "sha256-Mkn9jDYbKsFzIjfc4NvC2KuxPEWMNAS1XvNfg9V38bU="
+  }
+]
