@@ -34,5 +34,9 @@
     <None Include="$(RootDir)lib/fnalibs/lib64/libFAudio.so.0;$(RootDir)lib/fnalibs/lib64/libSDL3.so.0" Condition="Exists('$(RootDir)lib/fnalibs/lib64/libFAudio.so.0')"
       CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <None Include="$(RootDir)lib/fnalibs/osx/libFAudio.0.dylib;$(RootDir)lib/fnalibs/osx/libSDL3.0.dylib" Condition="Exists('$(RootDir)lib/fnalibs/osx/libFAudio.0.dylib')"
+      CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
 
 </Project>

@@ -29,6 +29,15 @@ public sealed class GraphicsDriverTests : IDisposable
         Assert.Null(GraphicsDriver.Default(requested, ownFna3d: true));
     }
 
+    [Theory]
+    [InlineData(null, "OpenGL")]
+    [InlineData("", "OpenGL")]
+    [InlineData("Metal", null)]      // the user's choice stays
+    public void OnMacOs_OpenGlStaysTheDefault_EvenWithOurFna3d(string? requested, string? expected)
+    {
+        Assert.Equal(expected, GraphicsDriver.Default(requested, ownFna3d: true, macOS: true));
+    }
+
     private void Ship(byte[] dll, string recordedHash)
     {
         File.WriteAllBytes(Path.Combine(dir, "FNA3D.dll"), dll);
@@ -41,6 +50,17 @@ public sealed class GraphicsDriverTests : IDisposable
     {
         byte[] dll = [1, 2, 3];
         Ship(dll, Convert.ToHexStringLower(SHA256.HashData(dll)));
+
+        Assert.True(GraphicsDriver.HasOwnFna3d(dir));
+    }
+
+    [Fact]
+    public void OurMacOsFna3d_IsRecognisedByItsRecordedHash()
+    {
+        byte[] dylib = [4, 5, 6];
+        File.WriteAllBytes(Path.Combine(dir, "libFNA3D.0.dylib"), dylib);
+        File.WriteAllLines(Path.Combine(dir, GraphicsDriver.OwnFna3dRecord),
+            ["OpenMagicka build of FNA3D (altered source: see native/README.md).", "FNA3D abc", $"libFNA3D.0.dylib sha256 {Convert.ToHexStringLower(SHA256.HashData(dylib))}"]);
 
         Assert.True(GraphicsDriver.HasOwnFna3d(dir));
     }

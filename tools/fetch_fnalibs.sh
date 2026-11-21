@@ -19,6 +19,14 @@ trap 'rm -rf "$tmp"' EXIT
 gh run download "$run" -R "$repo" -n fnalibs -D "$tmp/fnalibs"
 gh run download "$run" -R "$repo" -n fnalibs-apple -D "$tmp/apple"
 mv "$tmp/apple/osx" "$tmp/fnalibs/osx"
+if [ "$(uname -s)" = "Darwin" ]; then
+    for dylib in "$tmp/fnalibs/osx"/*.dylib; do
+        if ! otool -l "$dylib" | grep -q "@loader_path"; then
+            install_name_tool -add_rpath "@loader_path" "$dylib"
+            codesign --force --sign - "$dylib"
+        fi
+    done
+fi
 echo "$repo run $run" > "$tmp/fnalibs/SOURCE"
 
 rm -rf "$dest"

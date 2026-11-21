@@ -1,0 +1,113 @@
+OpenMagicka fork of MojoShader (altered source, see native/README.md).
+
+Metal (SDL_GPU): a vertex shader input that the draw's vertex declaration does not supply is read
+as float4(0, 0, 0, 1), as D3D9 and GL do, instead of failing the pipeline. Applies after 0005.
+
+diff --git a/mojoshader_sdlgpu.c b/mojoshader_sdlgpu.c
+index dcc693d..f7c7348 100644
+--- a/mojoshader_sdlgpu.c
++++ b/mojoshader_sdlgpu.c
+@@ -530,10 +530,70 @@ static char *metal_add_missing_varyings(MOJOSHADER_sdlContext *ctx,
+     return out;
+ } // metal_add_missing_varyings
+ 
++// OpenMagicka fork: Metal refuses a pipeline whose vertex shader reads an attribute that the
++//  vertex declaration does not supply ("Vertex attribute v3(3) is missing"), where D3D9 and
++//  GL read a default. Drop each such input from the input struct and read it as
++//  float4(0, 0, 0, 1). Returns a new source, or NULL when nothing is missing.
++static char *metal_default_missing_inputs(MOJOSHADER_sdlContext *ctx, const char *vsrc,
++                                          const MOJOSHADER_parseData *pd,
++                                          const MOJOSHADER_vertexAttribute *attrs,
++                                          int attrCount)
++{
++    char *out = NULL;
++    int i, k;
++
++    for (i = 0; i < pd->attribute_count; i++)
++    {
++        const MOJOSHADER_attribute *attr = &pd->attributes[i];
++        char field[96], define[160], repl[160];
++        int found = 0;
++
++        for (k = 0; k < attrCount; k++)
++            if (attrs[k].usage == attr->usage && attrs[k].usageIndex == attr->index)
++                found = 1;
++        if (found || attr->name == NULL)
++            continue;
++
++        const char *src = out ? out : vsrc;
++        SDL_snprintf(field, sizeof (field), "float4 %s [[attribute(", attr->name);
++        SDL_snprintf(define, sizeof (define), "#define %s input.%s", attr->name, attr->name);
++        SDL_snprintf(repl, sizeof (repl), "#define %s float4(0.0, 0.0, 0.0, 1.0)", attr->name);
++        const char *fieldAt = SDL_strstr(src, field);
++        const char *defineAt = fieldAt ? SDL_strstr(fieldAt, define) : NULL;
++        if (defineAt == NULL)
++            continue;
++
++        const char *lineStart = fieldAt;
++        while (lineStart > src && lineStart[-1] != '\n')
++            lineStart--;
++        const char *lineEnd = SDL_strchr(fieldAt, '\n');
++        lineEnd = lineEnd ? lineEnd + 1 : fieldAt + SDL_strlen(fieldAt);
++
++        const size_t cap = SDL_strlen(src) + SDL_strlen(repl) + 1;
++        char *next = (char *) ctx->malloc_fn(cap, ctx->malloc_data);
++        if (next == NULL)
++            break;
++        size_t at = lineStart - src;
++        SDL_memcpy(next, src, at);
++        SDL_memcpy(next + at, lineEnd, defineAt - lineEnd);
++        at += defineAt - lineEnd;
++        SDL_memcpy(next + at, repl, SDL_strlen(repl));
++        at += SDL_strlen(repl);
++        SDL_strlcpy(next + at, defineAt + SDL_strlen(define), cap - at);
++        if (out != NULL)
++            ctx->free_fn(out, ctx->malloc_data);
++        out = next;
++    } // for
++
++    return out;
++} // metal_default_missing_inputs
++
+ static MOJOSHADER_sdlProgram *compile_program(
+     MOJOSHADER_sdlContext *ctx,
+     MOJOSHADER_sdlShaderData *vshader,
+-    MOJOSHADER_sdlShaderData *pshader)
++    MOJOSHADER_sdlShaderData *pshader,
++    const MOJOSHADER_vertexAttribute *vertexAttributes,
++    int vertexAttributeCount)
+ {
+     SDL_GPUShaderCreateInfo createInfo;
+     SDL_ShaderCross_SPIRV_Info crossCreateInfo;
+@@ -587,11 +647,22 @@ static MOJOSHADER_sdlProgram *compile_program(
+             } // while
+         } // if
+ 
++        // OpenMagicka fork: see metal_default_missing_inputs().
++        char *defaulted = metal_default_missing_inputs(ctx, vshaderSource, vshader->parseData,
++                                                       vertexAttributes, vertexAttributeCount);
++        if (defaulted != NULL)
++        {
++            vshaderSource = defaulted;
++            vshaderCodeSize = SDL_strlen(defaulted);
++        } // if
++
+         // OpenMagicka fork: see metal_add_missing_varyings().
+         char *patched = metal_add_missing_varyings(ctx, vshaderSource, pshaderSource,
+                                                    vshader->parseData->mainfn);
+         if (patched != NULL)
+         {
++            if (vshaderSource != vshader->parseData->output)
++                ctx->free_fn(vshaderSource, ctx->malloc_data);
+             vshaderSource = patched;
+             vshaderCodeSize = SDL_strlen(patched);
+         } // if
+@@ -746,7 +817,7 @@ MOJOSHADER_sdlProgram *MOJOSHADER_sdlLinkProgram(
+     if (shader_format == SDL_GPU_SHADERFORMAT_SPIRV)
+         MOJOSHADER_linkSPIRVShaders(vshader->parseData, pshader->parseData,
+                                     vertexAttributes, vertexAttributeCount);
+-    program = compile_program(ctx, vshader, pshader);
++    program = compile_program(ctx, vshader, pshader, vertexAttributes, vertexAttributeCount);
+ 
+     if (program == NULL)
+         return NULL;

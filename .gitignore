@@ -14,3 +14,7 @@ __pycache__/
 
 # the beta packages: tools/package_beta.ps1
 artifacts/
+
+# local game assets and tooling (never committed)
+assets/
+.local/

@@ -1,0 +1,17 @@
+OpenMagicka fork of FNA3D (altered source: see native/README.md).
+
+SDL_GPU: say why a graphics pipeline failed (SDL_GetError()), not only that it did.
+
+diff --git a/src/FNA3D_Driver_SDL.c b/src/FNA3D_Driver_SDL.c
+index 6b56a74..f46c2f5 100644
+--- a/src/FNA3D_Driver_SDL.c
++++ b/src/FNA3D_Driver_SDL.c
+@@ -1758,7 +1758,7 @@ static SDL_GPUGraphicsPipeline* SDLGPU_INTERNAL_FetchGraphicsPipeline(
+ 
+ 	if (pipeline == NULL)
+ 	{
+-		FNA3D_LogError("Failed to create graphics pipeline!");
++		FNA3D_LogError("Failed to create graphics pipeline! %s", SDL_GetError());
+ 	}
+ 
+ 	GraphicsPipelineHashTable_Insert(

@@ -1,0 +1,22 @@
+OpenMagicka fork of MojoShader (altered source, see native/README.md).
+
+Metal profile: no semicolon after the #define of a uniform that belongs to an array variable.
+
+Exact twin of 0001-hlsl-uniform-array-define.patch for the Metal profile: a uniform register
+that belongs to a relatively addressed array variable (such as a skinned bone palette) was
+defined as `#define c1 uniforms_float4[1];`, turning `o5.w = r0.y + -c1.w;` into a Metal
+shader compilation error.
+
+diff --git a/profiles/mojoshader_profile_metal.c b/profiles/mojoshader_profile_metal.c
+--- a/profiles/mojoshader_profile_metal.c
++++ b/profiles/mojoshader_profile_metal.c
+@@ -764,7 +764,8 @@ void emit_METAL_uniform(Context *ctx, RegisterType regtype, int regnum,
+ 
+         // !!! FIXME: might trigger unused var warnings in Clang.
+         //output_line(ctx, "constant %s &%s = %s[%d];", utype, varname, name, index);
+-        output_line(ctx, "#define %s %s[%d];", varname, name, index);
++        // OpenMagicka fork: no semicolon here, it broke expressions using the register.
++        output_line(ctx, "#define %s %s[%d]", varname, name, index);
+         push_output(ctx, &ctx->mainline);
+         ctx->indent++;
+         output_line(ctx, "#undef %s", varname);  // !!! FIXME: gross.

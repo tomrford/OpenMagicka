@@ -20,11 +20,11 @@ public class NativeForkTests
         throw new DirectoryNotFoundException("the repository root was not found");
     }
 
-    private static Dictionary<string, string> Recorded() =>
-        File.ReadAllLines(Path.Combine(Root, "native", "win-x64", "SOURCE.txt"))
+    private static Dictionary<string, string> Recorded(string platform) =>
+        File.ReadAllLines(Path.Combine(Root, "native", platform, "SOURCE.txt"))
             .Select(line => line.Trim())
             .Where(line => line.StartsWith("FNA3D ", StringComparison.Ordinal) || line.StartsWith("MojoShader", StringComparison.Ordinal)
-                || line.EndsWith(".dll sha256", StringComparison.Ordinal) || line.Contains(" sha256 ", StringComparison.Ordinal))
+                || line.Contains(" sha256 ", StringComparison.Ordinal))
             .Select(line => line.Split(' '))
             .ToDictionary(parts => parts[0], parts => parts[^1]);
 
@@ -42,24 +42,41 @@ public class NativeForkTests
 
     private static string Sha256(string path) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
 
-    [Fact]
-    public void TheBuild_WasMadeFromTheSubmodulesFnaPins()
+    [Theory]
+    [InlineData("win-x64")]
+    [InlineData("osx-arm64")]
+    public void TheBuild_WasMadeFromTheSubmodulesFnaPins(string platform)
     {
-        var recorded = Recorded();
+        var recorded = Recorded(platform);
 
         Assert.Equal(Head("lib/FNA/lib/FNA3D"), recorded["FNA3D"]);
         Assert.Equal(Head("lib/FNA/lib/FNA3D/MojoShader"), recorded["MojoShader"]);
     }
 
-    [Fact]
-    public void TheBuild_HasEveryPatch_AsItIsNow_AndIsTheShippedDll()
+    [Theory]
+    [InlineData("win-x64", "FNA3D.dll")]
+    [InlineData("osx-arm64", "libFNA3D.0.dylib")]
+    public void TheBuild_HasEveryPatch_AsItIsNow_AndIsTheShippedLibrary(string platform, string library)
     {
-        var recorded = Recorded();
+        var recorded = Recorded(platform);
         var patches = Directory.GetFiles(Path.Combine(Root, "native", "patches", "MojoShader"), "*.patch");
 
         Assert.NotEmpty(patches);
         Assert.All(patches, patch => Assert.Equal(Sha256(patch), recorded["MojoShader/" + Path.GetFileName(patch)]));
         Assert.Equal(patches.Length, recorded.Keys.Count(k => k.StartsWith("MojoShader/", StringComparison.Ordinal)));
-        Assert.Equal(Sha256(Path.Combine(Root, "native", "win-x64", "FNA3D.dll")), recorded["FNA3D.dll"]);
+        Assert.Equal(Sha256(Path.Combine(Root, "native", platform, library)), recorded[library]);
+    }
+
+    [Theory]
+    [InlineData("MojoShader-macos")]
+    [InlineData("FNA3D-macos")]
+    public void TheMacBuild_HasEveryMacOnlyPatch_AsItIsNow(string directory)
+    {
+        var recorded = Recorded("osx-arm64");
+        var patches = Directory.GetFiles(Path.Combine(Root, "native", "patches", directory), "*.patch");
+
+        Assert.NotEmpty(patches);
+        Assert.All(patches, patch => Assert.Equal(Sha256(patch), recorded[directory + "/" + Path.GetFileName(patch)]));
+        Assert.Equal(patches.Length, recorded.Keys.Count(k => k.StartsWith(directory + "/", StringComparison.Ordinal)));
     }
 }

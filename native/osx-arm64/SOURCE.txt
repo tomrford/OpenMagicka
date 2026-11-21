@@ -1,0 +1,14 @@
+OpenMagicka build of FNA3D (altered source: see native/README.md).
+FNA3D 62a41708e975867e4fa7914aca55fdb13c36a0a1
+MojoShader ad5dff84830c2863c841f4b1f4e3df78c705b383
+SDL3 headers 3.4.18
+Compiler: Apple clang version 21.0.0 (clang-2100.3.34.2) (arm64)
+Patches:
+  MojoShader/0001-hlsl-uniform-array-define.patch sha256 b7e21f5df0cf5559579329c5f7a8b68ed01545803689a83f5729f0494d31bdbe
+  MojoShader/0002-spirv-scalar-exp.patch sha256 64b1063a55336d3d92a0cdfe1b89fe9aba8e655cab088ee40f2e50611818c5c9
+  MojoShader/0003-preshader-dotswiz.patch sha256 1b9176773e95a499bab10f21012d83bf9f74da4cb278dbe15de0b14fb5a073b4
+  MojoShader-macos/0004-metal-uniform-array-define.patch sha256 07e5e89f2cd52f2f408d5b29080eb8213387d5634f641796337ecfc9f648681c
+  MojoShader-macos/0005-metal-missing-varyings.patch sha256 39009ee9642dda198af98ed6374db76721508ede6b86cfb14aa8c4fa76ddaded
+  MojoShader-macos/0006-metal-missing-vertex-inputs.patch sha256 7c2c64dca41b5c9525ada45bb720ddeecefc48fc777cbcd4a179be8104ebad47
+  FNA3D-macos/0001-pipeline-error-detail.patch sha256 c5eeef474a7bd8272f7b3882d3bc9ba950f5a99285e10f7edec1601df89cc823
+libFNA3D.0.dylib sha256 ea9cf5ce4bfee917f2547a7a61b4236649ee4cc0a6ac6f3436ec7b927020e782

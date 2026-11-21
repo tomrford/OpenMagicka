@@ -12,6 +12,7 @@
     <NativeTarget Condition="'$(NativeTarget)' == '' And $([MSBuild]::IsOSPlatform('Windows'))">win-x64</NativeTarget>
     <NativeTarget Condition="'$(NativeTarget)' == '' And $([MSBuild]::IsOSPlatform('Linux')) And '$(HostArch)' == 'X64'">linux-x64</NativeTarget>
     <NativeTarget Condition="'$(NativeTarget)' == '' And $([MSBuild]::IsOSPlatform('Linux')) And '$(HostArch)' == 'Arm64'">linux-arm64</NativeTarget>
+    <NativeTarget Condition="'$(NativeTarget)' == '' And $([MSBuild]::IsOSPlatform('OSX')) And '$(HostArch)' == 'Arm64'">osx-arm64</NativeTarget>
     <NativeTarget Condition="'$(NativeTarget)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">osx</NativeTarget>
   </PropertyGroup>
 
@@ -19,8 +20,8 @@
     <ProjectReference Include="..\OpenMagicka.Game\OpenMagicka.Game.csproj" />
   </ItemGroup>
 
-  <!-- FNA native libraries, fetched by tools/fetch_fnalibs.sh. On Windows x64 FNA3D is our own
-       build with MojoShader fixes (native/README.md, tools/build_fna3d.ps1). -->
+  <!-- FNA native libraries, fetched by tools/fetch_fnalibs.sh. On Windows x64 and macOS arm64 FNA3D is our own
+       build with MojoShader fixes (native/README.md, tools/build_fna3d.ps1, tools/build_fna3d_macos.sh). -->
   <ItemGroup Condition="'$(NativeTarget)' == 'win-x64'">
     <None Include="$(FnaLibs)x64/*.dll" Exclude="$(FnaLibs)x64/FNA3D.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(RootDir)native/win-x64/FNA3D.dll" CopyToOutputDirectory="Always" Visible="false" />
@@ -33,7 +34,12 @@
   <ItemGroup Condition="'$(NativeTarget)' == 'linux-arm64'">
     <None Include="$(FnaLibs)libaarch64/*" CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
-  <ItemGroup Condition="'$(NativeTarget)' == 'osx' Or $(NativeTarget.StartsWith('osx-'))">
+  <ItemGroup Condition="'$(NativeTarget)' == 'osx-arm64'">
+    <None Include="$(FnaLibs)osx/*.dylib" Exclude="$(FnaLibs)osx/libFNA3D.0.dylib" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(RootDir)native/osx-arm64/libFNA3D.0.dylib" CopyToOutputDirectory="Always" Visible="false" />
+    <None Include="$(RootDir)native/osx-arm64/SOURCE.txt" Link="FNA3D.OpenMagicka.txt" CopyToOutputDirectory="Always" Visible="false" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(NativeTarget)' == 'osx' Or '$(NativeTarget)' == 'osx-x64'">
     <None Include="$(FnaLibs)osx/*.dylib" CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 

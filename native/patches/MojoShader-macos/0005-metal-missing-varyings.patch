@@ -1,0 +1,107 @@
+OpenMagicka fork of MojoShader (altered source, see native/README.md).
+
+Metal (SDL_GPU): declare and zero-initialise vertex outputs that a pixel shader reads but the
+vertex shader never writes; Metal fails the pipeline where D3D9, GL and Vulkan leave them undefined.
+
+diff --git a/mojoshader_sdlgpu.c b/mojoshader_sdlgpu.c
+index 5a55c66..dcc693d 100644
+--- a/mojoshader_sdlgpu.c
++++ b/mojoshader_sdlgpu.c
+@@ -465,6 +465,71 @@ parse_shader_fail:
+     return NULL;
+ } // MOJOSHADER_sdlCompileShader
+ 
++// OpenMagicka fork: Metal refuses to link a fragment input that the vertex shader does not
++//  write ("Fragment input(s) `user(color0)` ... not written by vertex shader"), where D3D9,
++//  GL and Vulkan leave it undefined. Declare each such varying in the vertex output struct
++//  and zero-initialise the output. Returns a new source, or NULL when nothing is missing.
++static char *metal_add_missing_varyings(MOJOSHADER_sdlContext *ctx,
++                                        const char *vsrc, const char *psrc,
++                                        const char *vmain)
++{
++    char missing[16][24];
++    char tag[40];
++    char structName[160];
++    char outputDecl[160];
++    int count = 0;
++    int i;
++    const char *p = psrc;
++
++    while (count < 16 && (p = SDL_strstr(p, "[[user(")) != NULL)
++    {
++        const char *start = p + 7;
++        const char *end = SDL_strstr(start, ")]]");
++        int dup = 0;
++        if (end == NULL || (end - start) >= (int) sizeof (missing[0]))
++            break;
++        SDL_snprintf(tag, sizeof (tag), "[[user(%.*s)]]", (int) (end - start), start);
++        if (SDL_strstr(vsrc, tag) == NULL)
++        {
++            for (i = 0; i < count; i++)
++                if (SDL_strncmp(missing[i], start, end - start) == 0 && missing[i][end - start] == '\0')
++                    dup = 1;
++            if (!dup)
++                SDL_snprintf(missing[count++], sizeof (missing[0]), "%.*s", (int) (end - start), start);
++        } // if
++        p = end;
++    } // while
++
++    if (count == 0)
++        return NULL;
++
++    SDL_snprintf(structName, sizeof (structName), "struct %s_Output", vmain);
++    SDL_snprintf(outputDecl, sizeof (outputDecl), "%s_Output output;", vmain);
++    const char *structAt = SDL_strstr(vsrc, structName);
++    const char *brace = structAt ? SDL_strchr(structAt, '{') : NULL;
++    const char *fieldsAt = brace ? SDL_strchr(brace, '\n') : NULL;
++    const char *declAt = fieldsAt ? SDL_strstr(fieldsAt, outputDecl) : NULL;
++    if (declAt == NULL)
++        return NULL;
++    fieldsAt++;
++
++    const size_t len = SDL_strlen(vsrc);
++    const size_t cap = len + (count * 64) + 16;
++    char *out = (char *) ctx->malloc_fn(cap, ctx->malloc_data);
++    if (out == NULL)
++        return NULL;
++
++    size_t at = fieldsAt - vsrc;
++    SDL_memcpy(out, vsrc, at);
++    for (i = 0; i < count; i++)
++        at += SDL_snprintf(out + at, cap - at, "    float4 om_missing_%d [[user(%s)]];\n", i, missing[i]);
++    SDL_memcpy(out + at, fieldsAt, declAt - fieldsAt);
++    at += declAt - fieldsAt;
++    at += SDL_snprintf(out + at, cap - at, "%s_Output output = {};", vmain);
++    SDL_strlcpy(out + at, declAt + SDL_strlen(outputDecl), cap - at);
++    return out;
++} // metal_add_missing_varyings
++
+ static MOJOSHADER_sdlProgram *compile_program(
+     MOJOSHADER_sdlContext *ctx,
+     MOJOSHADER_sdlShaderData *vshader,
+@@ -521,6 +586,15 @@ static MOJOSHADER_sdlProgram *compile_program(
+                 *ptr = '2';
+             } // while
+         } // if
++
++        // OpenMagicka fork: see metal_add_missing_varyings().
++        char *patched = metal_add_missing_varyings(ctx, vshaderSource, pshaderSource,
++                                                   vshader->parseData->mainfn);
++        if (patched != NULL)
++        {
++            vshaderSource = patched;
++            vshaderCodeSize = SDL_strlen(patched);
++        } // if
+     } // else if
+ 
+     if (SDL_ShaderCross_CompileGraphicsShaderFromSPIRV != NULL)
+@@ -563,6 +637,9 @@ static MOJOSHADER_sdlProgram *compile_program(
+         );
+     } // else
+ 
++    if (vshaderSource != vshader->parseData->output)
++        ctx->free_fn(vshaderSource, ctx->malloc_data);
++
+     if (program->vertexShader == NULL)
+     {
+         set_error(SDL_GetError());
