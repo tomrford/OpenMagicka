@@ -1,0 +1,31 @@
+OpenMagicka fork: an interactive cue threw its sound away and started a new one whenever its
+variable changed at all, even when the value still chose the same variation. Magicka's steam spray
+is interactive on OrientationAngle, which every 3D placement changes, so it restarted every tick
+(a sawtooth buzz), and once stopping its release started over each time and never ended. The
+sound now changes only when another variation is chosen, and not at all once the cue is stopping.
+
+diff --git a/src/FACT_internal.c b/src/FACT_internal.c
+index 1cdb334..5a9d91a 100644
+--- a/src/FACT_internal.c
++++ b/src/FACT_internal.c
+@@ -1634,8 +1634,20 @@ static void FACT_INTERNAL_UpdateCue(FACTCue *cue)
+ 		}
+ 		if (next != cue->interactive)
+ 		{
++			uint16_t variationIndex;
+ 			cue->interactive = next;
+ 
++			/* OpenMagicka fork: the sound changes only when the value
++			 * chooses another variation, and never once the cue is
++			 * stopping (its release would start over and never end). */
++			if (	(cue->state & FACT_STATE_STOPPING) ||
++				(	cue->playingSound != NULL &&
++					get_active_variation_index(cue, &variationIndex) &&
++					variationIndex == cue->playingSound->variation_index	)	)
++			{
++				return;
++			}
++
+ 			/* New sound, time for death! */
+ 			if (cue->playingSound != NULL)
+ 			{
