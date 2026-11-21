@@ -72,7 +72,7 @@ public sealed class ShellContent : IDisposable
         {
             if (GameFiles.SoundNames(shell.Loader) is { } names)
             {
-                shell.Sounds = new SoundSystem(audio, names);
+                shell.Sounds = new SoundSystem(audio, names) { Log = SoundLog.FromEnvironment() };
                 shell.Sounds.SetVolumes(settings.MusicVolume, settings.SoundVolume);
             }
             else

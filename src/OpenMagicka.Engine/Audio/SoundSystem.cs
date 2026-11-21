@@ -32,6 +32,9 @@ public sealed partial class SoundSystem : IDisposable
 
     public IAudioBackend Backend { get; }
 
+    /// <summary>A record of the cues for debugging (<see cref="SoundLog.Variable"/>); none by default.</summary>
+    public SoundLog? Log { get; set; }
+
     public SoundNames Names { get; }
 
     /// <summary>Where the sounds are heard: over the camera's ground point, looking down (the camera sets it each tick).</summary>
@@ -67,6 +70,7 @@ public sealed partial class SoundSystem : IDisposable
             cue.SetVariable(variable, value);
         }
         active.Add(cue);
+        Log?.Started(cue.Name);
         return cue;
     }
 
@@ -112,6 +116,7 @@ public sealed partial class SoundSystem : IDisposable
         {
             return;
         }
+        Log?.Step(Math.Max(dt, 0), active);
         dt = Math.Clamp(dt, 0, MaxStep);
         ForgetStoppedMusic();
         for (var i = active.Count - 1; i >= 0; i--)
@@ -145,6 +150,7 @@ public sealed partial class SoundSystem : IDisposable
             cue.Pause();
             paused.Add(cue);
         }
+        Log?.Paused(paused, active);
     }
 
     public void ResumeAll()
@@ -154,6 +160,7 @@ public sealed partial class SoundSystem : IDisposable
             cue.Resume();
         }
         paused.Clear();
+        Log?.Resumed();
     }
 
     public void Dispose()

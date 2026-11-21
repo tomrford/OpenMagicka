@@ -164,4 +164,27 @@ public class SoundSystemTests
         Assert.Equal(1, audio.Volumes["Music"]);
         Assert.All(SoundSystem.SoundCategories, c => Assert.Equal(0.3f, audio.Volumes[c], 4));
     }
+
+    [Fact]
+    public void TheSoundLog_CountsTheCuesStartedEachSecond_MarksOneStartedEveryTick_AndSaysWhatAPauseLeftSounding()
+    {
+        var (sounds, _) = Make("spell_steam_hit", "amb_wind");
+        var written = new StringWriter();
+        sounds.Log = new SoundLog(written);
+
+        sounds.Play(SoundBanks.Ambience, "amb_wind");
+        for (var tick = 0; tick < 61; tick++)
+        {
+            sounds.Play(SoundBanks.Spells, "spell_steam_hit");
+            sounds.Update(Tick, []);
+        }
+        var second = written.ToString();
+        Assert.Contains("spell_steam_hit x", second, StringComparison.Ordinal);
+        Assert.Contains("(restarted every tick?)", second, StringComparison.Ordinal);
+        Assert.Contains("playing [amb_wind, spell_steam_hit x", second, StringComparison.Ordinal);
+
+        sounds.Get(SoundBanks.Ambience, "amb_wind");                                                // prepared, not played: a pause passes it by
+        sounds.PauseAll();
+        Assert.Contains("paused [amb_wind, spell_steam_hit x61]; left sounding [amb_wind]", written.ToString(), StringComparison.Ordinal);
+    }
 }
