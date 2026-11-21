@@ -1,0 +1,107 @@
+OpenMagicka fork of MojoShader (altered source, see native/README.md).
+
+Metal (SDL_GPU): integer vertex formats (BYTE4 bone indices, SHORT2, SHORT4) are read into uint4/int4
+and converted to float4, as the SPIR-V path patches them; Metal read them as float4 garbage. Applies
+after 0006.
+
+diff --git a/mojoshader_sdlgpu.c b/mojoshader_sdlgpu.c
+index f7c7348..04a761a 100644
+--- a/mojoshader_sdlgpu.c
++++ b/mojoshader_sdlgpu.c
+@@ -588,6 +588,78 @@ static char *metal_default_missing_inputs(MOJOSHADER_sdlContext *ctx, const char
+     return out;
+ } // metal_default_missing_inputs
+ 
++// OpenMagicka fork: replaces the first `find` in `src` with `repl`; a new source, or NULL.
++static char *metal_replace_once(MOJOSHADER_sdlContext *ctx, const char *src,
++                                const char *find, const char *repl)
++{
++    const char *at = SDL_strstr(src, find);
++    if (at == NULL)
++        return NULL;
++    const size_t findLen = SDL_strlen(find), replLen = SDL_strlen(repl);
++    const size_t cap = SDL_strlen(src) - findLen + replLen + 1;
++    char *out = (char *) ctx->malloc_fn(cap, ctx->malloc_data);
++    if (out == NULL)
++        return NULL;
++    SDL_memcpy(out, src, at - src);
++    SDL_memcpy(out + (at - src), repl, replLen);
++    SDL_strlcpy(out + (at - src) + replLen, at + findLen, cap - (at - src) - replLen);
++    return out;
++} // metal_replace_once
++
++// OpenMagicka fork: the Metal profile declares every vertex input float4, but integer
++//  vertex formats (BYTE4 bone indices, SHORT2/SHORT4) must be read into integer types;
++//  the SPIR-V path patches the same types in MOJOSHADER_linkSPIRVShaders. Declare those
++//  inputs uint4/int4 and convert to float4 where the shader reads them.
++static char *metal_integer_inputs(MOJOSHADER_sdlContext *ctx, const char *vsrc,
++                                  const MOJOSHADER_parseData *pd,
++                                  const MOJOSHADER_vertexAttribute *attrs,
++                                  int attrCount)
++{
++    char *out = NULL;
++    int i, k;
++
++    for (k = 0; k < attrCount; k++)
++    {
++        const MOJOSHADER_vertexElementFormat format = attrs[k].vertexElementFormat;
++        const char *type;
++        if (format == MOJOSHADER_VERTEXELEMENTFORMAT_BYTE4)
++            type = "uint4";
++        else if (format == MOJOSHADER_VERTEXELEMENTFORMAT_SHORT2 || format == MOJOSHADER_VERTEXELEMENTFORMAT_SHORT4)
++            type = "int4";
++        else
++            continue;
++
++        for (i = 0; i < pd->attribute_count; i++)
++        {
++            const MOJOSHADER_attribute *attr = &pd->attributes[i];
++            char find[160], repl[160];
++            char *next;
++            if (attr->usage != attrs[k].usage || attr->index != attrs[k].usageIndex || attr->name == NULL)
++                continue;
++
++            SDL_snprintf(find, sizeof (find), "float4 %s [[attribute(", attr->name);
++            SDL_snprintf(repl, sizeof (repl), "%s %s [[attribute(", type, attr->name);
++            next = metal_replace_once(ctx, out ? out : vsrc, find, repl);
++            if (next == NULL)
++                continue;
++            if (out != NULL)
++                ctx->free_fn(out, ctx->malloc_data);
++            out = next;
++
++            SDL_snprintf(find, sizeof (find), "#define %s input.%s", attr->name, attr->name);
++            SDL_snprintf(repl, sizeof (repl), "#define %s float4(input.%s)", attr->name, attr->name);
++            next = metal_replace_once(ctx, out, find, repl);
++            if (next != NULL)
++            {
++                ctx->free_fn(out, ctx->malloc_data);
++                out = next;
++            } // if
++        } // for
++    } // for
++
++    return out;
++} // metal_integer_inputs
++
+ static MOJOSHADER_sdlProgram *compile_program(
+     MOJOSHADER_sdlContext *ctx,
+     MOJOSHADER_sdlShaderData *vshader,
+@@ -656,6 +728,17 @@ static MOJOSHADER_sdlProgram *compile_program(
+             vshaderCodeSize = SDL_strlen(defaulted);
+         } // if
+ 
++        // OpenMagicka fork: see metal_integer_inputs().
++        char *typed = metal_integer_inputs(ctx, vshaderSource, vshader->parseData,
++                                           vertexAttributes, vertexAttributeCount);
++        if (typed != NULL)
++        {
++            if (vshaderSource != vshader->parseData->output)
++                ctx->free_fn(vshaderSource, ctx->malloc_data);
++            vshaderSource = typed;
++            vshaderCodeSize = SDL_strlen(typed);
++        } // if
++
+         // OpenMagicka fork: see metal_add_missing_varyings().
+         char *patched = metal_add_missing_varyings(ctx, vshaderSource, pshaderSource,
+                                                    vshader->parseData->mainfn);

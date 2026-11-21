@@ -10,5 +10,6 @@ Patches:
   MojoShader-macos/0004-metal-uniform-array-define.patch sha256 07e5e89f2cd52f2f408d5b29080eb8213387d5634f641796337ecfc9f648681c
   MojoShader-macos/0005-metal-missing-varyings.patch sha256 39009ee9642dda198af98ed6374db76721508ede6b86cfb14aa8c4fa76ddaded
   MojoShader-macos/0006-metal-missing-vertex-inputs.patch sha256 7c2c64dca41b5c9525ada45bb720ddeecefc48fc777cbcd4a179be8104ebad47
+  MojoShader-macos/0007-metal-integer-vertex-inputs.patch sha256 ec122c99499f7e02018e8effd665f7fa554bb63e2303ce4b838aa42d21b5431a
   FNA3D-macos/0001-pipeline-error-detail.patch sha256 c5eeef474a7bd8272f7b3882d3bc9ba950f5a99285e10f7edec1601df89cc823
-libFNA3D.0.dylib sha256 ea9cf5ce4bfee917f2547a7a61b4236649ee4cc0a6ac6f3436ec7b927020e782
+libFNA3D.0.dylib sha256 6a176311b6c2af6c23b9ac2324cf96b9e5516a09adb809745365272b5552784a
