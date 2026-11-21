@@ -47,6 +47,7 @@ FAudio), under the same terms as above.
 |---|---|
 | `0001-interactive-cue-sound-on-play.patch` | All platforms: XACT interactive cues (the spells' sprays, beams, shields, burning, wet and frozen loops) were silent, as FACT chose their sound only when their variable changed after they were played |
 | `0002-interactive-cue-keeps-its-variation.patch` | All platforms: an interactive cue restarted its sound on every change of its variable; the steam spray (keyed on `OrientationAngle`, which every 3D placement changes) buzzed at the tick rate and, once stopping, never ended |
+| `0003-release-stops-tracks-without-a-release-curve.patch` | All platforms: a cue stopped as authored kept its tracks with no release curve playing at full volume through the longest release; every spray rang for 5 s after it stopped |
 
 The flake builds it on macOS and Linux. The Windows build and the fetched fnalibs still have the
 stock FAudio.
