@@ -5,6 +5,10 @@ namespace OpenMagicka.Tests.Net;
 
 public class TcpNetTransportTests
 {
+    // Generous: a busy CI machine (macOS runners especially) can leave the transport's thread-pool loops waiting for
+    // seconds. Passing runs never wait this long.
+    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(15);
+
     [Fact]
     public void HostAndClient_ConnectExchangeMessagesAndPreserveOrder()
     {
@@ -67,7 +71,7 @@ public class TcpNetTransportTests
 
     private static bool TryReceiveWithWait(INetTransport transport, out NetMessage message)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(3);
+        var deadline = DateTime.UtcNow + Patience;
         while (DateTime.UtcNow < deadline)
         {
             if (transport.TryReceive(out message))
@@ -82,7 +86,7 @@ public class TcpNetTransportTests
 
     private static bool WaitUntil(Func<bool> condition)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(3);
+        var deadline = DateTime.UtcNow + Patience;
         while (DateTime.UtcNow < deadline)
         {
             if (condition())
