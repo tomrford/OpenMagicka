@@ -311,7 +311,8 @@ public sealed partial class Jormungandr
         var (centre, reach) = Spine.Bounds();
         foreach (var entity in manager.Query(centre, reach))
         {
-            if (!entity.IsDamageable || entity is Missile || IsOwn(entity) || spineHits.Remembers(entity) || !Spine.Touches(entity, TouchSlack, out var hit))
+            if (!entity.IsDamageable || entity is Missile or SpellShield { IsPassable: true } || IsOwn(entity) || spineHits.Remembers(entity)
+                || !Spine.Touches(entity, TouchSlack, out var hit))
             {
                 continue;
             }

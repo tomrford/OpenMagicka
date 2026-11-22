@@ -118,6 +118,9 @@ public abstract class Entity
     {
     }
 
+    /// <summary>The entities that come into a level with it, right after it (a boss's zones and bodies); none by default.</summary>
+    public virtual IReadOnlyList<Entity> Parts => [];
+
     /// <summary>The physics bodies it owns: a scene left suspends them while it is kept away.</summary>
     protected internal virtual IEnumerable<Physics.PhysicsBody> Bodies => [];
 

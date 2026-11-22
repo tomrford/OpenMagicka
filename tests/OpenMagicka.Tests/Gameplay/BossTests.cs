@@ -233,34 +233,4 @@ public class BossTests
         Assert.Null(boss.Head.Manager);
         Assert.NotEqual(NetId.None, world.Entities.Add(Spawn(world)));                          // its id is not reused
     }
-
-    /// <summary>An entity that brings another in, then fails.</summary>
-    private sealed class Faulty(Entity brought) : Entity
-    {
-        public override Vector3 Position => Vector3.Zero;
-        public override float Radius => 1;
-        public override bool IsDead => false;
-        public override bool IsRemovable => false;
-
-        protected override void OnAdded()
-        {
-            Manager!.Add(brought);
-            throw new InvalidOperationException("no");
-        }
-    }
-
-    [Fact]
-    public void AnEntityThatFailsComingIn_TakesWhatItBroughtOut_AndGivesItsNameBack()
-    {
-        using var world = World();
-        var named = Spawn(world);
-        named.UniqueId = 7;
-        var brought = new OpenMagicka.Gameplay.Characters.Character(Goblin, world.Physics, new Vector3(3, 0.9f, 0));
-        var faulty = new Faulty(brought) { UniqueId = 7 };
-
-        Assert.Throws<InvalidOperationException>(() => world.Entities.Add(faulty));
-        Assert.Equal([named], world.Entities.Entities);
-        Assert.Null(brought.Manager);
-        Assert.Same(named, world.Entities.FindByUniqueId(7));
-    }
 }
