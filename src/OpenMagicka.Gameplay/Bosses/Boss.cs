@@ -10,7 +10,8 @@ namespace OpenMagicka.Gameplay.Bosses;
 /// time from the moment it is added, whether or not its fight runs yet (the fight says so through
 /// <see cref="FightStarted"/>), and owns its parts: the zones that take its damage and the bodies that block. It is
 /// drawn as one skinned model. Its parts come into the manager with it and leave with it; <see cref="Withdraw"/>
-/// takes it all out at the end of the frame. Host and client run the same states; only the host decides (OM-42).
+/// takes it all out at the end of the frame. Only the host has one: the fight's adapter makes none on a client, and
+/// replicating a boss is still to come (OM-42).
 /// </summary>
 public abstract class Boss : Entity
 {
@@ -38,9 +39,6 @@ public abstract class Boss : Entity
     /// <summary>Whether the fight runs (the fight sets it each frame, after the scripts).</summary>
     public bool FightStarted { get; set; }
 
-    /// <summary>Only the host chooses, rolls and spawns; a client plays what it is told (OM-42).</summary>
-    public bool IsHost { get; set; } = true;
-
     /// <summary>The model drawn for it (an asset, as a level names it).</summary>
     public abstract string Model { get; }
 
@@ -52,6 +50,9 @@ public abstract class Boss : Entity
 
     /// <summary>Each bone's skinning transform this frame, in the world.</summary>
     public abstract ReadOnlySpan<Matrix4x4> BoneTransforms { get; }
+
+    /// <summary>Whether its blows draw blood (the game's gore option).</summary>
+    public bool BloodAndGore { get; set; } = true;
 
     /// <summary>The white flash of a blow, 1 fading to 0.</summary>
     public float Flash => MathF.Max(flashTimer, 0) / FlashTime;
@@ -85,8 +86,18 @@ public abstract class Boss : Entity
     /// </summary>
     protected internal virtual DamageResult DamageZone(BossZone zone, DamageEntry damage, Entity? attacker, Vector3 attackPosition) => DamageResult.None;
 
+    /// <summary>The blows that hurt it so far (what the damage numbers tell one blow from a status's burn by).</summary>
+    public int BlowsTaken { get; private set; }
+
+    /// <summary>Where its damage numbers show.</summary>
+    public virtual Vector3 NumbersAt => Position + Vector3.UnitY * 1.5f;
+
     /// <summary>A blow landed: the boss flashes.</summary>
-    protected void Flashes() => flashTimer = FlashTime;
+    protected void Flashes()
+    {
+        flashTimer = FlashTime;
+        BlowsTaken++;
+    }
 
     /// <summary>The flash fades; then the boss's own frame.</summary>
     public sealed override void Update(float dt)

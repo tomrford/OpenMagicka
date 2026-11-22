@@ -152,12 +152,14 @@ public sealed class EffectDirector : IDisposable
 
     /// <summary>
     /// Where a following item's effect is: on its missile, at its item's tip, on the entity, with its spray (its spot on
-    /// the caster, turned as the caster turns); none once the missile, the entity or the spray is gone. Another source
+    /// the caster, turned as the caster turns), where a boss's own effect is; none once the missile, the entity or the
+    /// spray is gone, or the boss's effect is off. Another source
     /// (an item's passive) cannot be followed: its effect stays where it began, until its end cue or the scene's end.
     /// </summary>
     private static Func<Matrix4x4?> Follower(object source, Vector3 position, Vector3 direction) => source switch
     {
         Gameplay.Spells.Effects.SprayEffect spray => () => spray.Place is var (at, facing) ? Facing(at, facing) : null,
+        Gameplay.Bosses.BossEffect boss => () => boss.IsOn ? Facing(boss.Position, boss.Direction) : null,
         Missile missile => () => missile.IsDead || missile.Manager is null ? null : Facing(missile.Position, missile.Velocity),
         Item item => () => Facing(item.Tip, direction),
         Entity entity => () => entity.IsRemovable || entity.Manager is null ? null : Facing(entity.Position, direction),

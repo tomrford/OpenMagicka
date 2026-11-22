@@ -8,7 +8,7 @@ namespace OpenMagicka.Gameplay.Bosses;
 /// A boss's solid body (a serpent's spine, docs/gameplay/BOSSES.md §1): a chain of capsules, each an immovable body
 /// laid from one point of the chain towards the next with the length it was given, that blocks what walks into it
 /// and takes no damage. The boss lays it each frame from its bones; while the boss is under the ground it is parked
-/// far below the level. Shots pass it by as an entity (it is no target); its bodies stop missiles.
+/// far below the level. It is no target: shots and missiles pass it by.
 /// </summary>
 public sealed class BossBody : Entity
 {
@@ -65,8 +65,8 @@ public sealed class BossBody : Entity
         return new Segment(from, length > 1e-6f ? along / length * Lengths[index] : Vector3.Zero);
     }
 
-    /// <summary>The middle of the centre capsule (on the ground, as the original's: at a height of 1).</summary>
-    public override Vector3 Position => Capsule(Centre).At(0.5f) with { Y = 1 };
+    /// <summary>Where the centre capsule starts (on the ground, as the original's: at a height of 1).</summary>
+    public override Vector3 Position => Capsule(Centre).Origin with { Y = 1 };
 
     public override float Radius => Radii[Centre];
 
@@ -126,32 +126,49 @@ public sealed class BossBody : Entity
     }
 
     /// <summary>
-    /// Whether a sphere touches any capsule as laid, and where on the body (the capsule's surface nearest it); a parked
-    /// body touches nothing.
+    /// Whether an entity, by its own shape, touches any capsule as laid (within <paramref name="slack"/> more), and where on
+    /// the entity (the capsule nearest it); a parked body touches nothing.
     /// </summary>
-    public bool Touches(Vector3 centre, float radius, out Vector3 at)
+    public bool Touches(Entity entity, float slack, out Vector3 at)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         at = default;
         if (!IsPlaced)
         {
             return false;
         }
         var best = float.MaxValue;
-        var point = new Segment(centre, Vector3.Zero);
         for (var i = 0; i < bodies.Length; i++)
         {
             var capsule = Capsule(i);
-            var squared = Segment.DistanceSquared(capsule, point, out var s, out _);
-            var reach = Radii[i] + radius;
-            if (squared <= reach * reach && squared < best)
+            if (!entity.SegmentIntersect(capsule, Radii[i] + slack, out var hit))
             {
-                best = squared;
-                var axis = capsule.At(s);
-                var outward = centre - axis;
-                at = axis + (outward.LengthSquared() > 1e-12f ? Vector3.Normalize(outward) * Radii[i] : Vector3.Zero);
+                continue;
+            }
+            var squared = Segment.DistanceSquared(capsule, new Segment(hit, Vector3.Zero), out _, out _);
+            if (squared < best)
+            {
+                (best, at) = (squared, hit);
             }
         }
         return best < float.MaxValue;
+    }
+
+    /// <summary>The middle of the chain as laid, and how far from it its farthest point is (where to look for what it touches).</summary>
+    public (Vector3 Centre, float Reach) Bounds()
+    {
+        var centre = Vector3.Zero;
+        foreach (var point in points)
+        {
+            centre += point;
+        }
+        centre /= points.Length;
+        var reach = 0f;
+        foreach (var point in points)
+        {
+            reach = MathF.Max(reach, Vector3.Distance(point, centre));
+        }
+        return (centre, reach + Radii.Max());
     }
 
     /// <summary>It is no target of shots or blows: they find it by its bodies, if at all.</summary>

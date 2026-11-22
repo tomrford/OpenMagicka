@@ -68,16 +68,24 @@ public sealed class NamedBoss(string name, Func<ScriptScene, Matrix4x4, Boss> ma
 public static class NamedBosses
 {
     /// <summary>The names made so far.</summary>
-    public static IReadOnlyList<string> Names { get; } = [];
+    public static IReadOnlyList<string> Names { get; } = ["jormungandr"];
 
     /// <summary>A named boss for a fight, its model read through <paramref name="models"/>; null for one not made, or whose model the game lacks.</summary>
     public static NamedBoss? Make(string name, Func<string, AnimatedModel?> models)
     {
         ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(models);
-        return name.ToLowerInvariant() switch
+        switch (name.ToLowerInvariant())
         {
-            _ => null,
-        };
+            case "jormungandr":
+                if (models(Jormungandr.Asset) is not { } model)
+                {
+                    return null;
+                }
+                return new NamedBoss(name, (scene, at) => new Jormungandr(scene.World.Physics, new BossPose(model.Skeleton, model.Clips), at,
+                    new Random(scene.Random.Next())));
+            default:
+                return null;
+        }
     }
 }

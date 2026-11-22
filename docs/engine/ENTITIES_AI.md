@@ -1765,6 +1765,12 @@ Rough grouping by name (details are in the spells document):
 Boss code is large (up to 4300 lines per boss) and fully hardcoded. This is a separate reimplementation stage: each boss
 needs a behavior description based on observation and on the code.
 
+**In OpenMagicka** a named boss is one world entity (`Gameplay/Bosses/Boss`) that owns its parts: damage zones (spheres
+that take its hits) and solid bodies (capsule chains laid from its bones). It has its own hit points, resistances and
+statuses by the bosses' rules (`BossVitals`). The fight's `NamedBoss` makes it anew at every spawn and checkpoint
+replay, and tells it each frame whether the fight runs. The shared rules and each boss made so far (Jörmungandr) are
+in [`../gameplay/BOSSES.md`](../gameplay/BOSSES.md).
+
 ---
 
 ## 11. Navigation (`Magicka.PathFinding`)

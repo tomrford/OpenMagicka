@@ -45,7 +45,7 @@ public sealed class TemplateBoss(string asset, int uniqueId) : IFightBoss
 /// <c>spawnBoss boss= area= id= prop= generic= delayed= healthBarWidth= freezeTime= onDeath= onDamage= …</c>: the
 /// boss joins the fight at the place (the fight set up first): a prop of <c>Data/PhysicsEntities</c> with
 /// <c>prop</c>, a character of <c>Data/Characters</c> with <c>generic</c>, else the named boss of the game's
-/// code (OM-42; until then the fight has none of it). The fight starts unless <c>delayed</c>. A prop the
+/// code, made anew (<see cref="NamedBosses"/>; one not made yet: none, or the stand-in). The fight starts unless <c>delayed</c>. A prop the
 /// game lacks fails the loading. As the original, a replay does it again.
 /// </summary>
 public sealed class SpawnBossAction : ScriptAction
