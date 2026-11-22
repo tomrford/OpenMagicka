@@ -30,6 +30,9 @@ public sealed class VisualEffectInstance
 
     public bool IsActive { get; private set; }
 
+    /// <summary>It ends by itself (a Single effect); a Looping or Infinite one runs till it is stopped.</summary>
+    public bool PlaysOut => effect.Type is not (VisualEffectType.Looping or VisualEffectType.Infinite);
+
     public float TimelinePosition { get; private set; }
 
     public void Start(Matrix at)

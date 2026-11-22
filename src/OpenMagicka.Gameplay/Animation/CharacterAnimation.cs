@@ -19,6 +19,12 @@ public abstract class AnimationAction(float start, float end)
     protected static System.Numerics.Vector3 Finite(System.Numerics.Vector3 value, string name) =>
         float.IsFinite(value.X) && float.IsFinite(value.Y) && float.IsFinite(value.Z) ? value : throw new ArgumentOutOfRangeException(name, value, "must be finite");
 
+    /// <summary>
+    /// Whether a window reaching the clip's end closes when a clip that does not loop finishes (an effect). Others stay
+    /// open while the clip holds its last pose (a block), till the clip is left.
+    /// </summary>
+    public virtual bool EndsWithTheClip => false;
+
     /// <summary>Runs in a frame of the window; <paramref name="first"/> on the first one.</summary>
     public abstract void Run(Character owner, bool first);
 

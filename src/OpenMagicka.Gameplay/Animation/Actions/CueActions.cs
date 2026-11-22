@@ -18,7 +18,11 @@ public sealed class PlaySound(float start, float end, string cue, int banks) : A
     }
 }
 
-/// <summary>An effect at a bone; an attached one follows it until the window ends.</summary>
+/// <summary>
+/// An effect at a bone; an attached one follows it. Either ends with the window: an attached one stops, a loose one
+/// (every one in the game's data) stays where it began and, if it loops or is infinite, stops (a gore spray from a
+/// dying troll's mouth, a wizard's charge glow), else plays out.
+/// </summary>
 public sealed class PlayEffect(float start, float end, string effect, string bone, bool attach) : AnimationAction(start, end)
 {
     public string Effect { get; } = effect ?? throw new ArgumentNullException(nameof(effect));
@@ -35,13 +39,10 @@ public sealed class PlayEffect(float start, float end, string effect, string bon
         }
     }
 
-    public override void Stop(Character owner)
-    {
-        if (Attach)
-        {
-            owner.RaiseCue(new EffectEndCue(this));
-        }
-    }
+    /// <summary>A dying character holds its death clip's last pose: its effects end there all the same.</summary>
+    public override bool EndsWithTheClip => true;
+
+    public override void Stop(Character owner) => owner.RaiseCue(new EffectEndCue(this));
 }
 
 /// <summary>A step, heard and seen only on the ground and not levitating.</summary>

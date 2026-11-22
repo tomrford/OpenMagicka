@@ -38,7 +38,7 @@ public class AnimationCueTests
     }
 
     [Fact]
-    public void AnAttachedEffect_EndsWithItsWindow_AFreeOneDoesNot()
+    public void AnEffect_EndsWithItsWindow_AttachedOrNot()
     {
         using var world = World();
         var sonic = new PlayEffect(0, 0.5f, "brute_sonic", "root", attach: true);
@@ -50,7 +50,7 @@ public class AnimationCueTests
         Run(world, 0.8f);
 
         Assert.Equal<AnimationCue>(
-            [new EffectCue("brute_sonic", "root", true, sonic), new EffectCue("brute_dust", "LeftFootEnd", false, dust), new EffectEndCue(sonic)],
+            [new EffectCue("brute_sonic", "root", true, sonic), new EffectCue("brute_dust", "LeftFootEnd", false, dust), new EffectEndCue(dust), new EffectEndCue(sonic)],
             cues);
     }
 

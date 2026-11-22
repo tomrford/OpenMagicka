@@ -446,7 +446,10 @@ the window; "once" means the first frame only.
   damage to the entanglement); a gripped one breaks free (with grips).
 - **`PlaySound`** (4,288), **`PlayEffect`** (1,511), **`Footstep`** (2,928) and **`CameraShake`**
   (62) are for presentation. They fire once each: a sound cue from a bank at the character; an
-  effect at a bone, which with "attach" follows the bone until the action ends; a footstep chosen by
+  effect at a bone, which with "attach" follows the bone, and ends with the action's window (none in
+  the game's data attaches: a loose one stays where it began, and the window's end stops it if it
+  loops or is infinite, as a dying troll's `gore_spray_regular` or a wizard's charge glow, else lets
+  it play out); a footstep chosen by
   the ground material and the character's mass, only on the ground and not levitating; a camera
   shake at the character's position.
 - **With items:** `DealDamage` (1,997), `SpawnMissile` (1,787), `Gunfire` (335), `SpecialAbility`

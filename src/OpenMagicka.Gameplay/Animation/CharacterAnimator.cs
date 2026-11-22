@@ -140,7 +140,8 @@ public sealed class CharacterAnimator
         {
             var action = actions[i];
             var (ran, over) = (started[i], ended[i]);
-            if (t >= action.Start && (!ran || t <= action.End))
+            var closed = Clock.HasFinished && action.EndsWithTheClip && t >= MathF.Min(action.End, 1);   // the clip holds its end
+            if (t >= action.Start && (!ran || (t <= action.End && !closed)))
             {
                 (ran, over) = (true, false);
                 action.Run(owner, !started[i]);

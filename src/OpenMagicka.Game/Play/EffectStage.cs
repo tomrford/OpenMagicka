@@ -16,6 +16,7 @@ public sealed class EffectStage(Task<EffectLibrary> library, EffectChannel chann
     private readonly Task<EffectLibrary> library = library ?? throw new ArgumentNullException(nameof(library));
     private readonly EffectChannel channel = channel ?? throw new ArgumentNullException(nameof(channel));
     private readonly Dictionary<long, VisualEffectInstance> running = [];
+    private readonly HashSet<long> ending = [];                              // a loop or infinite one stops after its next step
     private readonly HashSet<string> missing = new(StringComparer.OrdinalIgnoreCase);
 
     public ParticlePool Pool { get; } = new();
@@ -47,7 +48,12 @@ public sealed class EffectStage(Task<EffectLibrary> library, EffectChannel chann
         foreach (var (id, effect) in running.ToList())
         {
             effect.Update(dt, Pool);
-            if (!effect.IsActive)
+            if (dt >= float.Epsilon && ending.Remove(id))
+            {
+                running.Remove(id);
+                effect.Stop();                                                // its particles fly on in the pool
+            }
+            else if (!effect.IsActive)
             {
                 running.Remove(id);
                 channel.Ended.Enqueue(id);                                    // it played out
@@ -79,7 +85,11 @@ public sealed class EffectStage(Task<EffectLibrary> library, EffectChannel chann
                 Pool.Spawn(command.Particle);
                 break;
             case EffectCommandKind.Stop when running.Remove(command.Id, out var stopped):
+                ending.Remove(command.Id);
                 stopped.Stop();                                               // its particles fly on in the pool
+                break;
+            case EffectCommandKind.End when running.TryGetValue(command.Id, out var ended) && !ended.PlaysOut:
+                ending.Add(command.Id);                                       // started in this same batch (a hitch), it still sprays once
                 break;
         }
     }

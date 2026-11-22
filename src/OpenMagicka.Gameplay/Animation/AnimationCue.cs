@@ -26,12 +26,13 @@ public sealed record DecalCue(string Decal, Vector3 Position, Vector3 Normal, Ve
 public sealed record SoundStopCue(string Cue) : AnimationCue;
 
 /// <summary>
-/// An effect at a bone; an attached one follows the bone until its <see cref="EffectEndCue"/> (same
-/// character and source). A looping clip can start one again before it ended: the new one replaces it.
+/// An effect at a bone until its <see cref="EffectEndCue"/> (same character and source): an attached one follows the
+/// bone and the end stops it; a loose one stays where it began and the end stops it only if it loops or is infinite
+/// (one that plays once plays out). A looping clip can start one again before it ended: the new one replaces it.
 /// </summary>
 public sealed record EffectCue(string Effect, string Bone, bool Attached, AnimationAction Source) : AnimationCue;
 
-/// <summary>The attached effect of this source ends (one never started may end too).</summary>
+/// <summary>The effect of this source ends (one never started may end too).</summary>
 public sealed record EffectEndCue(AnimationAction Source) : AnimationCue;
 
 /// <summary>

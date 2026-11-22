@@ -10,8 +10,11 @@ using OpenMagicka.Gameplay.Props;
 
 namespace OpenMagicka.Game.Play;
 
-/// <summary>What the renderer is told to do with a visual effect, or a lone particle (a tracer).</summary>
-public enum EffectCommandKind : byte { Start, Move, Stop, Particle }
+/// <summary>
+/// What the renderer is told to do with a visual effect, or a lone particle (a tracer). <see cref="End"/> stops one
+/// that loops or is infinite and leaves one that plays once to play out.
+/// </summary>
+public enum EffectCommandKind : byte { Start, Move, Stop, Particle, End }
 
 /// <summary>An effect started (its name), moved or stopped, by its number; a start or a move gives its place. A lone particle is given whole.</summary>
 public readonly record struct EffectCommand(EffectCommandKind Kind, long Id, string? Effect, Matrix4x4 World, Engine.Particles.ParticleSpawn Particle = default);
@@ -43,7 +46,7 @@ public sealed class EffectDirector : IDisposable
     private readonly Func<string, (Vector3 Centre, float Radius)?> gibShape;
     private readonly Random random = new(1);
     private readonly List<(Entity Source, AnimationCue Cue)> cues = [];
-    private readonly Dictionary<object, (long Id, Func<Matrix4x4?> Where)> following = [];   // by source: an entity, an item, a BoneKey, a PropKey
+    private readonly Dictionary<object, (long Id, Func<Matrix4x4?> Where, bool Loose)> following = [];   // a loose one ends rather than stops   // by source: an entity, an item, a BoneKey, a PropKey
     private readonly Dictionary<long, object> followingIds = [];
     private readonly Dictionary<SceneEffect, (long Id, int Starts)> scene = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<long, (ScriptScene Scene, int Key)> sceneIds = [];
@@ -84,7 +87,7 @@ public sealed class EffectDirector : IDisposable
             Play(source, cue);
         }
         cues.Clear();
-        foreach (var (key, (id, where)) in following.ToList())
+        foreach (var (key, (id, where, _)) in following.ToList())
         {
             if (where() is { } at)
             {
@@ -117,8 +120,8 @@ public sealed class EffectDirector : IDisposable
                     Stop(key);
                 }
                 break;
-            case EffectCue { Attached: false } bone when source is Character character:
-                Start(null, bone.Effect, Bone(character, bone.Bone));
+            case EffectCue { Attached: false } loose when source is Character character && Bone(character, loose.Bone)() is { } at:
+                Start(new BoneKey(character, loose.Source), loose.Effect, () => character.Manager is null ? null : at, loose: true);
                 break;
             case EffectCue bone when source is Character character:
                 Start(new BoneKey(character, bone.Source), bone.Effect, Bone(character, bone.Bone));
@@ -201,7 +204,7 @@ public sealed class EffectDirector : IDisposable
     /// <summary>A following item's effect: each of a source's effects is its own (a new one of the same name replaces it).</summary>
     private sealed record ItemKey(object Source, string Effect);
 
-    private void Start(object? key, string effect, Func<Matrix4x4?> where)
+    private void Start(object? key, string effect, Func<Matrix4x4?> where, bool loose = false)
     {
         if (string.IsNullOrEmpty(effect) || where() is not { } at)
         {
@@ -215,7 +218,7 @@ public sealed class EffectDirector : IDisposable
         Send(EffectCommandKind.Start, id, effect, at);
         if (key is not null)
         {
-            following[key] = (id, where);
+            following[key] = (id, where, loose);
             followingIds[id] = key;
         }
     }
@@ -225,7 +228,7 @@ public sealed class EffectDirector : IDisposable
         if (following.Remove(key, out var running))
         {
             followingIds.Remove(running.Id);
-            Send(EffectCommandKind.Stop, running.Id, null, default);
+            Send(running.Loose ? EffectCommandKind.End : EffectCommandKind.Stop, running.Id, null, default);
         }
     }
 

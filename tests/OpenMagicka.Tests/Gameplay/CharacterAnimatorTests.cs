@@ -12,8 +12,10 @@ public sealed class CharacterAnimatorTests : IDisposable
     public void Dispose() => worlds.ForEach(w => w.Dispose());
 
     /// <summary>Notes every run and stop.</summary>
-    internal sealed class Tracer(float start, float end, string name, List<string> log) : AnimationAction(start, end)
+    internal sealed class Tracer(float start, float end, string name, List<string> log, bool endsWithTheClip = false) : AnimationAction(start, end)
     {
+        public override bool EndsWithTheClip => endsWithTheClip;
+
         public override void Run(Character owner, bool first) => log.Add(first ? $"{name}:first" : $"{name}:run");
 
         public override void Stop(Character owner) => log.Add($"{name}:stop");
@@ -221,6 +223,22 @@ public sealed class CharacterAnimatorTests : IDisposable
 
         Assert.Equal(["breathe:stop", "fall:first"], log);
         Assert.Equal("die0_clip", animator.Clock.Clip!.Name);
+    }
+
+    [Fact]
+    public void AFinishedClipHoldingItsEnd_ClosesTheWindowsThatEndWithIt_OnlyForActionsThatAsk()
+    {
+        var log = new List<string>();
+        var (_, animator) = Make(Animations(log, ("die0", 1, false, [new Tracer(0, 1, "hold", log), new Tracer(0.5f, 1, "spray", log, endsWithTheClip: true)])));
+        animator.Force("die0");
+        for (var i = 0; i < 15; i++)
+        {
+            animator.Update(0.1f);
+        }
+
+        Assert.True(animator.Clock.HasFinished);
+        Assert.Equal(1, log.Count(l => l == "spray:stop"));
+        Assert.DoesNotContain("hold:stop", log);                                                // a block holds while the pose does
     }
 
     [Fact]
