@@ -106,9 +106,10 @@ public sealed partial class EntityManager
             return entity.Id;
         }
         var parts = entity.Parts;
-        if (parts.Count > 0 && (entities.Count + 1 + parts.Count > Capacity || parts.Any(p => p.Manager is not null || p.Parts.Count > 0)))
+        if (parts.Count > 0 && (entities.Count + 1 + parts.Count > Capacity || lastId + 1 + (uint)parts.Count >= LocalIds
+            || parts.Any(p => p.Manager is not null || p.Parts.Count > 0)))
         {
-            throw new InvalidOperationException($"the manager has no room for the entity and its {parts.Count} parts, or a part is taken");
+            throw new InvalidOperationException($"the manager has no room or ids for the entity and its {parts.Count} parts, or a part is taken");
         }
         var id = new NetId(lastId + 1);
         if (id.Value >= LocalIds)

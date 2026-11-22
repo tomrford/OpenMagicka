@@ -112,7 +112,7 @@ public sealed partial class Jormungandr : Boss
 
     public override string Model => Asset;
 
-    public override bool IsVisible => drawn;
+    public override bool IsVisible => drawn && !IsRemovable;
 
     public override Matrix4x4 RootTransform => pose.Root;
 
