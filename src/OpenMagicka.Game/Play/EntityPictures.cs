@@ -1,6 +1,7 @@
 using System.Numerics;
 using OpenMagicka.Engine.Rendering;
 using OpenMagicka.Gameplay;
+using OpenMagicka.Gameplay.Bosses;
 using OpenMagicka.Gameplay.Characters;
 using OpenMagicka.Gameplay.Entities;
 using OpenMagicka.Gameplay.Items;
@@ -16,8 +17,9 @@ public readonly record struct DrawnModel(string Asset, Matrix4x4 World, Matrix4x
 
 /// <summary>
 /// What of the world is drawn as models (logic thread): the characters posed by their bones (none yet:
-/// at their root) with the items in their hands, the physics props, the items lying about, the books of
-/// magick, the debris and the missiles. What has no model (or none the looks know) is left out.
+/// at their root) with the items in their hands, the named bosses above the ground, posed by theirs, the physics
+/// props, the items lying about, the books of magick, the debris and the missiles. What has no model (or none the
+/// looks know) is left out.
 /// </summary>
 public static class EntityPictures
 {
@@ -42,6 +44,9 @@ public static class EntityPictures
             {
                 case Character character:
                     Add(character, looks, into);
+                    break;
+                case Boss { IsVisible: true } boss:
+                    into.Add(new DrawnModel(boss.Model, boss.RootTransform, boss.BoneTransforms.ToArray(), Vector3.One));
                     break;
                 case PhysicsProp prop when looks(prop.Template) is { } look:
                     into.Add(new DrawnModel(look.Asset, prop.Transform, null, look.Tint));

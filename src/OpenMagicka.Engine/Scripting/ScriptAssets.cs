@@ -26,6 +26,10 @@ public sealed class ContentScriptAssets(TemplateLibrary library) : IScriptAssets
     private readonly Dictionary<string, ItemTemplate?> items = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Gameplay.Props.PropTemplate?> props = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<object, string> propAssets = new(ReferenceEqualityComparer.Instance);
+    private Func<string, AnimatedModel?>? models;
+
+    /// <summary>A named boss OpenMagicka has made (<see cref="NamedBosses"/>), its model read once; null for one not yet made.</summary>
+    public IFightBoss? Boss(string name) => NamedBosses.Make(name, models ??= AnimatedModels.Loader(library.Loader));
 
     public string? AssetOf(object template) => template switch
     {

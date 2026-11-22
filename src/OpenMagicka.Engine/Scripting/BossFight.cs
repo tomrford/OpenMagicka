@@ -11,7 +11,10 @@ public enum BossMessages
     StartFight,
 }
 
-/// <summary>A boss in a fight: its hit points, and how it takes the scripts' messages. The named bosses' own come with OM-42.</summary>
+/// <summary>
+/// A boss in a fight: its hit points, and how it takes the scripts' messages. The named bosses' own come with OM-42
+/// (<see cref="NamedBoss"/>); each frame the fight tells each whether it runs.
+/// </summary>
 public interface IFightBoss
 {
     float HitPoints { get; }
@@ -20,10 +23,18 @@ public interface IFightBoss
 
     bool IsDead { get; }
 
-    /// <summary>It comes into the world at the place (the fight's start, or a replay's); one still there stays.</summary>
+    /// <summary>
+    /// It comes into the world at the place (the fight's start, or a replay's). A prop or a character still there stays;
+    /// a named boss comes anew, whole and asleep, as the original's spawn sets its one up again.
+    /// </summary>
     void Enter(ScriptScene scene, Matrix4x4 at);
 
     void Message(BossMessages message);
+
+    /// <summary>A frame, after the scripts: whether its fight runs (a named boss wakes once it does).</summary>
+    void Tick(bool fightRunning)
+    {
+    }
 }
 
 /// <summary>
@@ -92,9 +103,16 @@ public sealed class ScriptBossFight : IScriptBoss
         }
     }
 
-    /// <summary>A frame: while it runs, the health and whether all the bosses are dead; before, a sliver of a bar.</summary>
+    /// <summary>
+    /// A frame: each boss is told whether the fight runs; while it runs, the health and whether all the bosses are dead;
+    /// before, a sliver of a bar.
+    /// </summary>
     internal void Update()
     {
+        foreach (var boss in bosses)
+        {
+            boss.Tick(IsRunning);
+        }
         if (!IsRunning)
         {
             NormalizedHealth = 0.0001f;
