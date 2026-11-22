@@ -125,7 +125,7 @@ public class ScriptBossActionsTests
         {
             using var world = World();
             var scene = Fight(world, """
-                <Trigger id="spawn" autorun="false"><Then><spawnBoss boss="jormungandr" area="spot" delayed="true"/></Then></Trigger>
+                <Trigger id="spawn" autorun="false"><Then><spawnBoss boss="fafnir" area="spot" delayed="true"/></Then></Trigger>
                 <Trigger id="go" autorun="false"><Then><activateBoss/></Then></Trigger>
                 <Trigger id="won" autorun="false"><If><bossDead/></If><Then><counter name="won" action="inc" value="1"/></Then></Trigger>
                 """);
@@ -140,7 +140,7 @@ public class ScriptBossActionsTests
             Fire(scene, "won");
 
             Assert.Equal(skip ? 1 : 0, scene.Level.Counter(ScriptScene.Hash("won")));
-            Assert.Equal(skip, fight.Bosses.SingleOrDefault() is StandInBoss { Name: "jormungandr" });
+            Assert.Equal(skip, fight.Bosses.SingleOrDefault() is StandInBoss { Name: "fafnir" });
         }
     }
 

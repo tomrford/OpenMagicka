@@ -190,17 +190,19 @@ public class BossTests
     }
 
     [Fact]
-    public void ABossesBody_IsSolid_WhereItIsLaid_AndTouchesWhatIsNearItsCapsules()
+    public void ABossesBody_IsSolid_WhereItIsLaid_AndTouchesWhatIsNearItsCapsules_ByItsShape()
     {
         using var world = World();
         var boss = new Dummy(world.Physics);
         world.Entities.Add(boss);
-        Assert.False(boss.Spine.Touches(new Vector3(1, 0.5f, 3), 0.1f, out _));                  // parked
+        var near = Spawn(world, at: new Vector3(1, 0.9f, 4.0f));
+        var far = Spawn(world, at: new Vector3(1, 0.9f, 5));
+        Assert.False(boss.Spine.Touches(near, 0.15f, out _));                                       // parked
 
         boss.Show(new Vector3(0, 1, 0));
-        Assert.True(boss.Spine.Touches(new Vector3(1, 0.5f, 3.8f), 0.4f, out var at));
-        Assert.Equal(new Vector3(1, 0.5f, 3.5f), at);
-        Assert.False(boss.Spine.Touches(new Vector3(1, 0.5f, 4.5f), 0.4f, out _));
+        Assert.True(boss.Spine.Touches(near, 0.15f, out var at));
+        Assert.Equal(3.6f, at.Z, 1);                                                              // on the goblin, facing the body
+        Assert.False(boss.Spine.Touches(far, 0.15f, out _));
         var down = world.Physics.CastSegment(new Vector3(3, 5, 3), new Vector3(3, -5, 3));
         Assert.Equal(1, down?.Position.Y ?? 0, 2);                                                // the second capsule, radius 0.5 over 0.5
 

@@ -8,7 +8,7 @@ public class AnimationClockTests
     private static readonly AnimationClip Swing = new("swing", 0.5f);
 
     [Fact]
-    public void Stopped_AClipStaysWhereItIs_NotFinished_ItsBlendDropped()
+    public void Stopped_AClipStaysWhereItIs_ButABlendGoesOnAndStartsItsClip()
     {
         var clock = new AnimationClock();
         clock.Start(Walk, loop: false);
@@ -17,13 +17,16 @@ public class AnimationClockTests
         clock.Stop();
         clock.Update(0.5f);
 
-        Assert.Equal((0.3f, false, false, false), (clock.Time, clock.IsPlaying, clock.HasFinished, clock.IsCrossFading));
+        Assert.Equal((0.3f, false, false, true), (clock.Time, clock.IsPlaying, clock.HasFinished, clock.IsCrossFading));
         Assert.Same(Walk, clock.Clip);
-        clock.Update(2);
+        clock.Update(0.6f);
+        Assert.Same(Swing, clock.Clip);                                                          // the blend ended: its clip plays
+        Assert.True(clock.IsPlaying);
+
         clock.Start(Walk, loop: false);
         clock.Update(2);
         clock.Stop();
-        Assert.False(clock.HasFinished);
+        Assert.True(clock.HasFinished);                                                          // as it was
     }
 
     [Fact]

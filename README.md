@@ -77,7 +77,7 @@ level alone, and `--screenshot <file.png>` saves a frame (of the menu, or of tha
 
 Two environment switches help when testing: `OPENMAGICKA_SOUND_LOG=1` writes the sounds started and playing once a
 second (and what a pause left sounding) to the console, and `OPENMAGICKA_SKIP_BOSSES=1` lets a level with a named
-boss that is not made yet (Jörmungandr, Fafnir, Vlad…) be played on: the boss counts as dead once its fight starts.
+boss that is not made yet (Fafnir, Vlad…) be played on: the boss counts as dead once its fight starts.
 
 ## Level viewer
 

@@ -134,8 +134,11 @@ public sealed class AnimationClock
         (fadeClip, CrossFadeDuration, CrossFadeTime, IsCrossFading, HasFinished) = (clip, fadeTime, 0, true, false);
     }
 
-    /// <summary>The clip stops where it is (kept, not finished), as XNAnimation's controller's stop; a blend is dropped.</summary>
-    public void Stop() => (IsPlaying, HasFinished, IsCrossFading, queued) = (false, false, false, null);
+    /// <summary>
+    /// The clip stops where it is, as XNAnimation's controller's stop: its time no longer runs, and whether it finished
+    /// stays as it was. A running blend goes on, and starts its clip when it ends.
+    /// </summary>
+    public void Stop() => IsPlaying = false;
 
     /// <summary>Forgets a queued crossfade.</summary>
     public void ClearQueue() => queued = null;
