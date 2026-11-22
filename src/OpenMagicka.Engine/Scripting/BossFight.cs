@@ -35,6 +35,11 @@ public interface IFightBoss
     void Tick(bool fightRunning)
     {
     }
+
+    /// <summary>The fight is over (a script's endBossFight, a checkpoint's restart): a named boss leaves the world.</summary>
+    void Leave()
+    {
+    }
 }
 
 /// <summary>
@@ -83,10 +88,14 @@ public sealed class ScriptBossFight : IScriptBoss
 
     public void Start() => running = true;
 
-    /// <summary>The fight is over (a script's endBossFight, a checkpoint's restart): no bosses, the game sees none.</summary>
+    /// <summary>The fight is over (a script's endBossFight, a checkpoint's restart): no bosses (a named one leaves the world), the game sees none.</summary>
     public void Reset(ScriptGame game)
     {
         ArgumentNullException.ThrowIfNull(game);
+        foreach (var boss in bosses)
+        {
+            boss.Leave();
+        }
         bosses.Clear();
         if (ReferenceEquals(game.Boss, this))
         {

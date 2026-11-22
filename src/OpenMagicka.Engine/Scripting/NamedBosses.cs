@@ -7,10 +7,11 @@ namespace OpenMagicka.Engine.Scripting;
 
 /// <summary>
 /// A named boss of OpenMagicka's own code in a fight (docs/gameplay/BOSSES.md §1): each <see cref="Enter"/> makes its
-/// world entity anew at the place (the one before leaves), as the original's spawn and checkpoint replay set its boss up
-/// whole again; the fight's frame tells it whether the fight runs. Only the host makes it. A level that cannot take a new
-/// one (full, or stepping) keeps the one it had, and tries again each frame. Its hit points and death are its entity's;
-/// with none it is not dead.
+/// world entity anew at the place (the one before leaves once the new one is in), as the original's spawn and checkpoint
+/// replay set its boss up whole again; the fight's frame tells it whether the fight runs, and the fight's end takes it
+/// out. Only the host makes it. A level that has no room for a new one (or is stepping) keeps the one it had; with none,
+/// the fight has none of it, which counts as dead, as a generic boss the level could not make. Its hit points and death
+/// are its entity's.
 /// </summary>
 /// <param name="size">The entities a boss takes in the level, itself with its parts (the room it needs).</param>
 public sealed class NamedBoss(string name, int size, Func<ScriptScene, Matrix4x4, Boss> make) : IFightBoss
@@ -27,48 +28,23 @@ public sealed class NamedBoss(string name, int size, Func<ScriptScene, Matrix4x4
 
     public float MaxHitPoints => Boss?.MaxHitPoints ?? 0;
 
-    public bool IsDead => Boss is { IsDead: true };
-
-    private (ScriptScene Scene, Matrix4x4 At)? waiting;
+    public bool IsDead => Boss is null or { IsDead: true };
 
     public void Enter(ScriptScene scene, Matrix4x4 at)
     {
         ArgumentNullException.ThrowIfNull(scene);
-        if (!scene.IsHost)
-        {
-            return;
-        }
-        waiting = (scene, at);
-        TryEnter();
-    }
-
-    /// <summary>
-    /// The new one comes in if the level has room for it beside the old one (which leaves at the end of this frame). With
-    /// no old one in the world it waits for room; with one, that one stays as it was.
-    /// </summary>
-    private void TryEnter()
-    {
-        if (waiting is not var (scene, at) || scene.World.Physics.IsStepping || scene.World.Entities.IsBusy)
-        {
-            return;
-        }
-        if (!scene.IsEntered)
-        {
-            waiting = null;                                                   // its scene was left: the spawn goes with it
-            return;
-        }
         var manager = scene.World.Entities;
+        if (!scene.IsHost || scene.World.Physics.IsStepping || manager.IsBusy)
+        {
+            return;
+        }
+        if (Boss is { Manager: null } or { IsRemovable: true })
+        {
+            Boss = null;                                                      // gone with the world (a checkpoint's restart)
+        }
         if (manager.Entities.Count + size > EntityManager.Capacity)
         {
-            if (Boss is { Manager: not null, IsRemovable: false })
-            {
-                Console.Error.WriteLine($"boss: the level is full; '{Name}' stays as it was");
-                waiting = null;
-            }
-            else
-            {
-                Boss = null;                                                  // none in the world: wait for room
-            }
+            Console.Error.WriteLine($"boss: the level is full; '{Name}' cannot come in anew");
             return;
         }
         var boss = make(scene, at);
@@ -76,23 +52,29 @@ public sealed class NamedBoss(string name, int size, Func<ScriptScene, Matrix4x4
         {
             manager.Add(boss);
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException e)
         {
-            manager.Discard(boss);                                            // no room after all: the old one stays
-            waiting = null;
+            Console.Error.WriteLine($"boss: '{Name}' cannot come in: {e.Message}");
+            manager.Discard(boss);
             return;
         }
-        Boss?.Withdraw();                                                     // the old one leaves only once the new one is in
-        (Boss, waiting) = (boss, null);
+        Boss?.Withdraw();
+        Boss = boss;
     }
 
     public void Tick(bool fightRunning)
     {
-        TryEnter();
         if (Boss is { } boss)
         {
             boss.FightStarted = fightRunning;
         }
+    }
+
+    /// <summary>The fight is over (endBossFight, a checkpoint's restart): the boss leaves the world, as the original's is no longer run nor drawn.</summary>
+    public void Leave()
+    {
+        Boss?.Withdraw();
+        Boss = null;
     }
 
     /// <summary>As the original's Jörmungandr, the bosses made so far heed no message.</summary>

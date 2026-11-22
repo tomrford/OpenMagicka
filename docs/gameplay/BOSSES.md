@@ -20,8 +20,10 @@ share, and each one OpenMagicka has made. The fight itself (its bar, titles, `ac
   starts), and otherwise nothing.
 - **Each spawn makes it anew.** The original keeps one instance and sets it up again on every `spawnBoss`, and a
   checkpoint's restart replays that spawn. So a retry always meets a whole boss, asleep at its locator. The boss
-  before it leaves the world at the end of the frame. A level with no room for the new one keeps the old one; with
-  none yet, the boss waits for room.
+  before it is retired at once (it does nothing more and is not drawn) and leaves the world at the end of the frame. A
+  level with no room for the new one keeps the old one; with none, the fight has none of it, which counts as dead.
+- **Its fight's end** (`endBossFight`, a checkpoint's restart) takes it out of the world, as the original's is then no
+  longer run nor drawn.
 - **It runs from its spawn.** The boss updates every frame on the world's time (a time warp slows it), whether or
   not its fight runs yet. After the scripts each frame, the fight tells it whether it runs. That is how a
   `delayed` boss wakes once `activateBoss` runs.

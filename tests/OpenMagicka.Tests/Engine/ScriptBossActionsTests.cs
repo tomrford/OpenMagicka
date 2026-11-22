@@ -187,7 +187,7 @@ public class ScriptBossActionsTests
     }
 
     [Fact]
-    public void ANamedBossInAFullLevel_KeepsTheOneThere_AndAFirstWaitsForRoomWithoutBeingMade()
+    public void ANamedBossInAFullLevel_IsNotMade_OneThereStays_AndEndBossFightTakesItOut()
     {
         using var world = World();
         var made = 0;
@@ -196,7 +196,10 @@ public class ScriptBossActionsTests
             made++;
             return new OpenMagicka.Tests.Gameplay.BossTests.Dummy(scene.World.Physics);
         });
-        var scene = Fight(world, """<Trigger id="spawn" autorun="false" repeat="true"><Then><spawnBoss boss="grimnir" area="spot"/></Then></Trigger>""", named);
+        var scene = Fight(world, """
+            <Trigger id="spawn" autorun="false" repeat="true"><Then><spawnBoss boss="grimnir" area="spot"/></Then></Trigger>
+            <Trigger id="end" autorun="false"><Then><endBossFight/></Then></Trigger>
+            """, named);
         var fillers = new List<OpenMagicka.Gameplay.Characters.Character>();
         while (world.Entities.Entities.Count < OpenMagicka.Gameplay.Entities.EntityManager.Capacity - 1)
         {
@@ -204,28 +207,29 @@ public class ScriptBossActionsTests
         }
 
         Fire(scene, "spawn");
-        for (var i = 0; i < 10; i++)
-        {
-            scene.Update(Tick);
-        }
         Assert.Equal(0, made);
         Assert.Null(named.Boss);
+        Assert.True(named.IsDead);                                                                // none: the fight does not wait on it
         foreach (var filler in fillers.Take(5))
         {
             filler.Terminate();
         }
         world.Tick(Tick);
-        scene.Update(Tick);
+        Fire(scene, "spawn");
         var first = Assert.IsType<OpenMagicka.Tests.Gameplay.BossTests.Dummy>(named.Boss);
         while (world.Entities.Entities.Count < OpenMagicka.Gameplay.Entities.EntityManager.Capacity)
         {
             Spawn(world, at: new Numerics.Vector3(0, 0.9f, -5));
         }
-
         Fire(scene, "spawn");
         world.Tick(Tick);
-        Assert.Same(first, named.Boss);
+        Assert.Same(first, named.Boss);                                                           // full: the one there stays
         Assert.Contains(first, world.Entities.Entities);
+
+        Fire(scene, "end");
+        world.Tick(Tick);
+        Assert.DoesNotContain(first, world.Entities.Entities);
+        Assert.Null(named.Boss);
         Assert.Equal(1, made);
     }
 
