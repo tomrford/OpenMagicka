@@ -215,4 +215,22 @@ public class BossTests
         }
         Assert.InRange(ball.Position.Z, 1.5f, 2.6f);                                             // stopped at the body, not through it
     }
+
+    [Fact]
+    public void ALevelWithoutRoomForItsParts_TakesNeitherTheBossNorThem_AndAddsOnAfter()
+    {
+        using var world = World();
+        for (var i = world.Entities.Entities.Count; i < EntityManager.Capacity - 2; i++)
+        {
+            world.Entities.Add(new Dummy(world.Physics).Head);                                  // a stand-in entity apiece
+        }
+        var count = world.Entities.Entities.Count;
+        var boss = new Dummy(world.Physics);
+
+        Assert.Throws<InvalidOperationException>(() => world.Entities.Add(boss));
+        Assert.Equal(count, world.Entities.Entities.Count);
+        Assert.Null(boss.Manager);
+        Assert.Null(boss.Head.Manager);
+        Assert.NotEqual(NetId.None, world.Entities.Add(Spawn(world)));                          // its id is not reused
+    }
 }

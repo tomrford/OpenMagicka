@@ -54,6 +54,10 @@ public sealed partial class Jormungandr : Boss
         : base(world, new BossVitals(FullHealth, ResistanceTable.Neutral.With(Elements.Earth, 0.75f).With(Elements.Ice, 0.75f)), random)
     {
         this.pose = pose ?? throw new ArgumentNullException(nameof(pose));
+        foreach (var clip in Clips.All)
+        {
+            pose.Clip(clip);                                                  // a model without them is not its: before any body is made
+        }
         head = pose.Bone("HeadBase");
         spine = [.. SpineBones.Select(pose.Bone)];
         chain = new Vector3[spine.Length];
@@ -64,10 +68,6 @@ public sealed partial class Jormungandr : Boss
         Spine = Part(new BossBody(this, world, [.. radii.Reverse()], [.. lengths.Reverse()], spine.Length - 2 - SpineCentre));
         (riseTremor, splash, frontTremor, backTremor, spray) = (new(this, Effects.Tremor), new(this, Effects.Splash), new(this, Effects.Tremor),
             new(this, Effects.Tremor), new(this, Effects.Spray));
-        foreach (var clip in Clips.All)
-        {
-            pose.Clip(clip);
-        }
         (orientation, position, direction) = (at, at.Translation, Forward(at));
         Change(States.Sleep);
     }

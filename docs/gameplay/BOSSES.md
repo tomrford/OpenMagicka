@@ -130,7 +130,8 @@ HitLeap and a risen or biting one to HitRisen; in any other state it is shrugged
   - *emerge:* the tremor shows on the ground where it will come up. After `W` (or once its head has hit the ground)
     it shows, strikes with the emerge's contact and kills the shields and barriers within 2 m. At 12.5% it plays
     `boss_jormungandr_rise`. When the clip ends it blends to `idle` (0.5 s) and the timer starts over.
-  - *idle:* at 0 hit points it dies (`die_above`). With no bites left it blends to `submerge` (0.5 s). Else it
+  - *idle:* at 0 hit points it dies (`die_above`). With no bites left it blends to `submerge` (0.5 s); while that
+    blend runs it chooses nothing (ours: the original could still choose if a frozen blend outlasted the wait). Else it
     turns to its wizard (rate 2). After `W` + 0.8 s it chooses: a **spit** if the wizard is over 15 m away or a solid
     barrier stands within 2 m of the point 3 m ahead, unless it has just spat; else a **bite**.
   - *submerge:* it takes no damage. Once it plays `boss_jormungandr_dive`, shakes the camera (0.5–1 for 1 s) and
@@ -140,7 +141,7 @@ HitLeap and a risen or biting one to HitRisen; in any other state it is shrugged
   random. It turns to the wizard (rate 1). At 37.5% it sprays (`jormungandr_spit_spray` at the head,
   `boss_jormungandr_spit`). From 38%, it spits a gob (§2.5) whenever its spit timer is out, up to four, each adding
   0.5 s. The timer has run down since the clip began, so three go out on three frames and the fourth half a second
-  later. When the clip ends it blends to `idle` and picks a wizard at random.
+  of clip later (ours: the timer runs on the clip's time, so the volley keeps that shape at the spit's speed). When the clip ends it blends to `idle` and picks a wizard at random.
 - **Bite:** it uses a bite, blends to `attack` (0.15 s), plays `boss_jormungandr_prebite` and strikes with the
   bite's contact. With no target it takes the wizard with the most elements queued. It turns to the wizard (rate
   1.5). At 40% it snaps (`boss_jormungandr_bite`) and speeds up to 1 + U[0, 0.6] × the share of hit points gone.
@@ -178,7 +179,7 @@ Each entry is (attack, element, amount, magnitude), through the victim's own res
 | Body, on a shield or barrier | (Knockback, Earth, 750, 1) |
 
 - The head and the body strike each thing they touch, again only after a quarter of a second. What the head's
-  strike kills is torn apart.
+  strike kills is torn apart. A sphere or disc shield is touched by its shell.
 - A shield or **solid** barrier the head touches takes (Damage, Earth, ¾ of its most, 1) instead. The serpent
   plays `boss_jormungandr_hitobject`, loses 750 and is staggered. A barrier that is not solid is passed.
 - A spit gob (radius 0.25) leaves 0.5 m ahead of the head towards the wizard, launched flat so that it drops onto
@@ -220,5 +221,8 @@ broken:
 | Three gobs on three frames, the fourth half a second later | Kept (at our fixed step). |
 | A wizard above the head makes the gob's aim fail | **Aimed at in 0.5 s.** |
 | Hidden mid-leap, the tremors show where the body last was | **None while hidden.** |
+| The leap's turn runs on whatever the clip's speed (frozen, the root still turns) | **At the clip's speed.** |
+| The spit timer runs on real time (at the fixed spit speed the volley would spread) | **On the clip's time.** |
+| Blending into its dive after a flinch, it can still choose a bite | **It chooses nothing while diving.** |
 | A spray's check against the spine never matches | Kept: the spray passes the body. |
 | A stagger during Risen can end in `die` after the dive under | Kept. |
