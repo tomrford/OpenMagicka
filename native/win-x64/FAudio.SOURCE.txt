@@ -1,0 +1,9 @@
+OpenMagicka build of FAudio (altered source: see native/README.md).
+FAudio 6839b88e304a046ae1a609ff14a085371e02a4e0
+SDL3 headers 3.4.18
+Compiler: Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64, static C runtime
+Patches:
+  FAudio/0001-interactive-cue-sound-on-play.patch sha256 13265d17d435efa0af38494593540ca86eb4a23c45e53613ee7ff8aff21387c1
+  FAudio/0002-interactive-cue-keeps-its-variation.patch sha256 1f0a2582de8edf125de4ce3fc9df44b9384fa9c0de10a226fccf6aafd6ac7ca8
+  FAudio/0003-release-stops-tracks-without-a-release-curve.patch sha256 1fe0f93c3fdb8311d8f2aac738821e15b290ddbbfcb7e8e280a6611c89b1ef8a
+FAudio.dll sha256 99da12e5c6b23dc81c06d4a42099f4ffc8c19b3b97e28ab72e2ccecc4a47d345

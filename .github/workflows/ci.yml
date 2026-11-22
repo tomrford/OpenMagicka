@@ -21,8 +21,17 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # The tests need neither the FNA native libraries nor the game files: tests that read
-      # the game's content run only when MAGICKA_DIR is set and are skipped here.
+      # On Windows, the FNA native libraries (as the release workflow takes them) give our FAudio
+      # the SDL3 it runs on, so OwnFAudioTests checks it. Elsewhere the tests need no native
+      # libraries. Tests that read the game's content run only when MAGICKA_DIR is set and are
+      # skipped here.
+      - name: Fetch the FNA native libraries
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sh tools/fetch_fnalibs.sh 39715067086
+
       - name: Build tests
         run: dotnet build tests/OpenMagicka.Tests -c Release
 

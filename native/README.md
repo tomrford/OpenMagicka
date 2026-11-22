@@ -1,11 +1,12 @@
-# OpenMagicka's own FNA3D
+# OpenMagicka's own FNA3D and FAudio
 
-This folder holds OpenMagicka's fork of FNA3D, the native graphics library of FNA, and of
-MojoShader, the shader translator compiled into FNA3D. The fork is a set of patches against the
-versions FNA pins (`lib/FNA/lib/FNA3D` and its `MojoShader` submodule) and one prebuilt binary.
+This folder holds OpenMagicka's fork of FNA3D, the native graphics library of FNA, of
+MojoShader, the shader translator compiled into FNA3D, and of FAudio, FNA's sound library. The
+fork is a set of patches against the versions FNA pins (`lib/FNA/lib/FNA3D` and its `MojoShader`
+submodule, `lib/FNA/lib/FAudio`) and prebuilt binaries.
 
-**These are altered versions of FNA3D and MojoShader**, not the originals, as their zlib license
-requires us to say. The changes were written with AI help. FNA3D's and MojoShader's maintainers do
+**These are altered versions of FNA3D, MojoShader and FAudio**, not the originals, as their zlib
+license requires us to say. The changes were written with AI help. Their maintainers do
 not accept AI-generated contributions, so the changes stay here and are **never sent upstream**: no
 pull requests and no patches in issue reports. A human may report the bugs upstream in their own
 words (OM-64).
@@ -49,5 +50,18 @@ FAudio), under the same terms as above.
 | `0002-interactive-cue-keeps-its-variation.patch` | All platforms: an interactive cue restarted its sound on every change of its variable; the steam spray (keyed on `OrientationAngle`, which every 3D placement changes) buzzed at the tick rate and, once stopping, never ended |
 | `0003-release-stops-tracks-without-a-release-curve.patch` | All platforms: a cue stopped as authored kept its tracks with no release curve playing at full volume through the longest release; every spray rang for 5 s after it stopped |
 
-The flake builds it on macOS and Linux. The Windows build and the fetched fnalibs still have the
-stock FAudio.
+| Platform | File | Built by |
+|---|---|---|
+| Windows x64 | `win-x64/FAudio.dll` | `pwsh tools/build_faudio.ps1` (as for FNA3D), or the Native workflow (`.github/workflows/native.yml`) on GitHub's Windows runners, whose artifact is committed |
+| macOS, Linux | (none committed) | `flake.nix`, on nixpkgs' FAudio |
+
+As with FNA3D, the C runtime is linked in, so the DLL needs only SDL3 and Windows, and
+`win-x64/FAudio.SOURCE.txt` records the FAudio commit, the SDL3 headers, the compiler and the
+hashes of the patches and of the DLL, checked by a test. The launcher ships this DLL instead of the
+FAudio of the fetched fnalibs, with the record next to it as `FAudio.OpenMagicka.txt`. The tests on
+Windows load it too, and `OwnFAudioTests` plays an interactive cue of a small XACT project made in
+the test on it (CI runs it on SDL's dummy audio device); stock FAudio fails it. FAudio's license is
+in `licenses/`.
+
+The fetched fnalibs, and so the Linux beta package and a `dotnet run` outside the flake on macOS
+or Linux, still have the stock FAudio.

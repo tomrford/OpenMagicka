@@ -21,11 +21,14 @@
   </ItemGroup>
 
   <!-- FNA native libraries, fetched by tools/fetch_fnalibs.sh. On Windows x64 and macOS arm64 FNA3D is our own
-       build with MojoShader fixes (native/README.md, tools/build_fna3d.ps1, tools/build_fna3d_macos.sh). -->
+       build with MojoShader fixes (native/README.md, tools/build_fna3d.ps1, tools/build_fna3d_macos.sh); on Windows x64
+       FAudio is our own build with FACT fixes too (tools/build_faudio.ps1). -->
   <ItemGroup Condition="'$(NativeTarget)' == 'win-x64'">
-    <None Include="$(FnaLibs)x64/*.dll" Exclude="$(FnaLibs)x64/FNA3D.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(FnaLibs)x64/*.dll" Exclude="$(FnaLibs)x64/FNA3D.dll;$(FnaLibs)x64/FAudio.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(RootDir)native/win-x64/FNA3D.dll" CopyToOutputDirectory="Always" Visible="false" />
     <None Include="$(RootDir)native/win-x64/SOURCE.txt" Link="FNA3D.OpenMagicka.txt" CopyToOutputDirectory="Always" Visible="false" />
+    <None Include="$(RootDir)native/win-x64/FAudio.dll" CopyToOutputDirectory="Always" Visible="false" />
+    <None Include="$(RootDir)native/win-x64/FAudio.SOURCE.txt" Link="FAudio.OpenMagicka.txt" CopyToOutputDirectory="Always" Visible="false" />
     <None Include="$(FnaLibs)D3D12/*.dll" Link="D3D12/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
   <ItemGroup Condition="'$(NativeTarget)' == 'linux-x64'">
