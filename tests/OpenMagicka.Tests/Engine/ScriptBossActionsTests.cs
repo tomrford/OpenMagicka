@@ -119,6 +119,32 @@ public class ScriptBossActionsTests
     }
 
     [Fact]
+    public void ANamedBossNotMadeYet_IsAStandInThatDiesAsItsFightStarts_WhenMissingBossesAreSkipped()
+    {
+        foreach (var skip in new[] { true, false })
+        {
+            using var world = World();
+            var scene = Fight(world, """
+                <Trigger id="spawn" autorun="false"><Then><spawnBoss boss="jormungandr" area="spot" delayed="true"/></Then></Trigger>
+                <Trigger id="go" autorun="false"><Then><activateBoss/></Then></Trigger>
+                <Trigger id="won" autorun="false"><If><bossDead/></If><Then><counter name="won" action="inc" value="1"/></Then></Trigger>
+                """);
+            scene.Game.SkipMissingBosses = skip;
+            var fight = scene.Game.BossFight;
+
+            Fire(scene, "spawn");
+            scene.Update(Tick);
+            Assert.False(fight.Dead);                                                             // not till the fight starts
+            Fire(scene, "go");
+            scene.Update(Tick);
+            Fire(scene, "won");
+
+            Assert.Equal(skip ? 1 : 0, scene.Level.Counter(ScriptScene.Hash("won")));
+            Assert.Equal(skip, fight.Bosses.SingleOrDefault() is StandInBoss { Name: "jormungandr" });
+        }
+    }
+
+    [Fact]
     public void APropBossTheGameLacks_FailsTheLoading()
     {
         using var world = World();

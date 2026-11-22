@@ -85,6 +85,9 @@ public sealed class ScriptGame
     /// <summary>The boss fight the scripts set up (the game's one, as the original's); <see cref="Boss"/> is it once a boss joins.</summary>
     public ScriptBossFight BossFight { get; } = new();
 
+    /// <summary>A named boss not made yet is a stand-in that dies as its fight starts (<see cref="StandInBoss"/>).</summary>
+    public bool SkipMissingBosses { get; set; } = StandInBoss.SkipFromEnvironment();
+
     /// <summary>The level's generic bar (a timer, a counter).</summary>
     public ScriptHealthBar HealthBar { get; } = new();
 

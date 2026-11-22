@@ -83,7 +83,14 @@ public sealed class SpawnBossAction : ScriptAction
         boss = Generic ? new TemplateBoss("data/characters/" + Boss, id) : Scene.Assets?.Boss(Boss);
     }
 
-    protected override void Execute() => Join(Scene, boss, Area, Delayed, FreezeTime, HealthBarWidth);
+    protected override void Execute()
+    {
+        if (boss is null && !Prop && !Generic)
+        {
+            boss = StandInBoss.For(Scene.Game, Boss);                         // a named boss not made yet
+        }
+        Join(Scene, boss, Area, Delayed, FreezeTime, HealthBarWidth);
+    }
 
     internal static void Join(ScriptScene scene, IFightBoss? boss, string area, bool delayed, float freezeTime, float healthBarWidth)
     {
@@ -166,4 +173,45 @@ public sealed class BossMessageAction : ScriptAction
     public BossMessages Message { get; set; }
 
     protected override void Execute() => Scene.Game.BossFight.Message(Message);
+}
+
+/// <summary>
+/// A debugging stand-in for a named boss OpenMagicka has not made yet (OM-42), so its level can be played on: with
+/// <see cref="Variable"/> set to 1 (<see cref="ScriptGame.SkipMissingBosses"/>), it joins the fight and is dead once
+/// the fight starts, so the level's <c>bossDead</c> ending runs. Without it the fight has no boss, and a line says so.
+/// </summary>
+public sealed class StandInBoss(string name) : IFightBoss
+{
+    public const string Variable = "OPENMAGICKA_SKIP_BOSSES";
+
+    public string Name { get; } = name;
+
+    public float HitPoints => 0;
+
+    public float MaxHitPoints => 1;
+
+    public bool IsDead => true;
+
+    /// <summary>Whether the environment asks for the missing bosses' fights to be skipped.</summary>
+    public static bool SkipFromEnvironment() => Environment.GetEnvironmentVariable(Variable) is { Length: > 0 } value && value != "0";
+
+    /// <summary>The stand-in when the game skips missing bosses; else none, and the console is told.</summary>
+    internal static StandInBoss? For(ScriptGame game, string name)
+    {
+        if (game.SkipMissingBosses)
+        {
+            Console.Error.WriteLine($"boss: '{name}' is not made yet; its fight is skipped ({Variable})");
+            return new StandInBoss(name);
+        }
+        Console.Error.WriteLine($"boss: '{name}' is not made yet, so its fight cannot be won; set {Variable}=1 to skip it");
+        return null;
+    }
+
+    public void Enter(ScriptScene scene, System.Numerics.Matrix4x4 at)
+    {
+    }
+
+    public void Message(BossMessages message)
+    {
+    }
 }
