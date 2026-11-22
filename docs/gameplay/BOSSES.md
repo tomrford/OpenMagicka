@@ -20,7 +20,8 @@ share, and each one OpenMagicka has made. The fight itself (its bar, titles, `ac
   starts), and otherwise nothing.
 - **Each spawn makes it anew.** The original keeps one instance and sets it up again on every `spawnBoss`, and a
   checkpoint's restart replays that spawn. So a retry always meets a whole boss, asleep at its locator. The boss
-  before it leaves the world at the end of the frame.
+  before it leaves the world at the end of the frame. A level with no room for the new one keeps the old one; with
+  none yet, the boss waits for room.
 - **It runs from its spawn.** The boss updates every frame on the world's time (a time warp slows it), whether or
   not its fight runs yet. After the scripts each frame, the fight tells it whether it runs. That is how a
   `delayed` boss wakes once `activateBoss` runs.
@@ -179,7 +180,8 @@ Each entry is (attack, element, amount, magnitude), through the victim's own res
 | Body, on a shield or barrier | (Knockback, Earth, 750, 1) |
 
 - The head and the body strike each thing they touch, again only after a quarter of a second. What the head's
-  strike kills is torn apart. A sphere or disc shield is touched by its shell.
+  strike kills is torn apart. A sphere or disc shield is touched by its shell (its rim too); one going down is not
+  touched.
 - A shield or **solid** barrier the head touches takes (Damage, Earth, ¾ of its most, 1) instead. The serpent
   plays `boss_jormungandr_hitobject`, loses 750 and is staggered. A barrier that is not solid is passed.
 - A spit gob (radius 0.25) leaves 0.5 m ahead of the head towards the wizard, launched flat so that it drops onto
@@ -221,7 +223,7 @@ broken:
 | Three gobs on three frames, the fourth half a second later | Kept (at our fixed step). |
 | A wizard above the head makes the gob's aim fail | **Aimed at in 0.5 s.** |
 | Hidden mid-leap, the tremors show where the body last was | **None while hidden.** |
-| The leap's turn runs on whatever the clip's speed (frozen, the root still turns) | **At the clip's speed.** |
+| The leap's turn and its timers (shown, and played back in the recoil) run on real time, whatever the clip's speed (frozen, the root still turns) | **On the clip's time.** |
 | The spit timer runs on real time (at the fixed spit speed the volley would spread) | **On the clip's time.** |
 | Blending into its dive after a flinch, it can still choose a bite | **It chooses nothing while diving.** |
 | A spray's check against the spine never matches | Kept: the spray passes the body. |

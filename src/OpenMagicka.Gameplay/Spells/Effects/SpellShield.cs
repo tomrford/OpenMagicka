@@ -141,6 +141,32 @@ public sealed class SpellShield : Entity, IShield
         dead = HitPoints <= 0;
     }
 
+    /// <summary>
+    /// The nearest point of a sphere's or disc's shell to a point (on the disc's rim when the point lies beyond its cap),
+    /// and how far it is. For a wall: 0 inside its box, else no distance at all (<see cref="float.MaxValue"/>).
+    /// </summary>
+    public float ShellDistance(Vector3 point, out Vector3 nearest)
+    {
+        nearest = point;
+        if (Shape == ShieldShape.Wall)
+        {
+            return BoxEntry(new Segment(point, Vector3.Zero), 0, out _) is not null ? 0 : float.MaxValue;
+        }
+        var off = point - Centre;
+        var away = off.LengthSquared() > 1e-12f ? Vector3.Normalize(off) : Facing;
+        if (Angle(off) > CapAngle)
+        {
+            var side = off - Facing * Vector3.Dot(off, Facing);
+            side = side.LengthSquared() > 1e-12f ? Vector3.Normalize(side) : Perpendicular(Facing);
+            away = Facing * MathF.Cos(CapAngle) + side * MathF.Sin(CapAngle);
+        }
+        nearest = Centre + away * ShellRadius;
+        return Vector3.Distance(point, nearest);
+    }
+
+    private static Vector3 Perpendicular(Vector3 v) =>
+        Vector3.Normalize(Vector3.Cross(v, MathF.Abs(v.Y) < 0.9f ? Vector3.UnitY : Vector3.UnitX));
+
     public bool Blocks(Vector3 from, Vector3 to, float tolerance, out Vector3 hit) => Crossing(new Segment(from, to - from), tolerance, out hit) is not null;
 
     public override bool SegmentIntersect(Segment segment, float radius, out Vector3 hit) => Crossing(segment, radius, out hit) is not null;
