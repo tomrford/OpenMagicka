@@ -127,6 +127,17 @@ public sealed partial class StatusSet
     /// <summary>A dead character keeps no status.</summary>
     public StatusSet Cleared() => new(new StatusEffect[StatusEffect.Count], DryTimer);
 
+    /// <summary>The set with one slot put as given (one not active empties it), for rules of their own (a boss's).</summary>
+    public StatusSet With(StatusEffect slot)
+    {
+        var copy = Copy();
+        copy[StatusEffect.Index(slot.Type)] = slot.IsActive ? slot : default;
+        return new StatusSet(copy, DryTimer);
+    }
+
+    /// <summary>The set with its drying timer set (not below zero).</summary>
+    public StatusSet Drying(float time) => new(Copy(), MathF.Max(0, StatusEffect.Finite(time, nameof(time))));
+
     /// <summary>One tick: the drying timer runs down, every status caps, fades and deals its damage.</summary>
     public StatusTick Update(float dt, float hitPoints, float maxHitPoints)
     {

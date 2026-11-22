@@ -107,8 +107,16 @@ public sealed partial class EntityManager
         {
             throw new InvalidOperationException("the server's ids are used up");
         }
-        Admit(entity, id);
-        lastId = id.Value;
+        lastId = id.Value;                                                    // taken first: an entity may add its parts as it comes in
+        try
+        {
+            Admit(entity, id);
+        }
+        catch
+        {
+            lastId = id.Value - 1;
+            throw;
+        }
         return id;
     }
 
@@ -125,8 +133,16 @@ public sealed partial class EntityManager
             throw new InvalidOperationException("the local ids are used up");
         }
         var id = new NetId(lastLocalId + 1);
-        Admit(entity, id);
         lastLocalId = id.Value;
+        try
+        {
+            Admit(entity, id);
+        }
+        catch
+        {
+            lastLocalId = id.Value - 1;
+            throw;
+        }
         return id;
     }
 

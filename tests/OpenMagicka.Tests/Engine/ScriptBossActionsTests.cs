@@ -145,6 +145,48 @@ public class ScriptBossActionsTests
     }
 
     [Fact]
+    public void ANamedBoss_IsMadeAnewAtEachSpawn_IsToldWhetherItsFightRuns_AndIsDeadWhenItSaysSo()
+    {
+        using var world = World();
+        var made = new List<OpenMagicka.Tests.Gameplay.BossTests.Dummy>();
+        var named = new NamedBoss("grimnir", (scene, at) =>
+        {
+            var boss = new OpenMagicka.Tests.Gameplay.BossTests.Dummy(scene.World.Physics);
+            made.Add(boss);
+            return boss;
+        });
+        var scene = Fight(world, """
+            <Trigger id="spawn" autorun="false" repeat="true"><Then><spawnBoss boss="grimnir" area="spot" delayed="true"/></Then></Trigger>
+            <Trigger id="go" autorun="false" repeat="true"><Then><activateBoss/></Then></Trigger>
+            """, named);
+        var fight = scene.Game.BossFight;
+
+        Fire(scene, "spawn");
+        var first = Assert.Single(made);
+        Assert.Contains(first, world.Entities.Entities);
+        Assert.False(first.FightStarted);
+        Fire(scene, "go");
+        Assert.True(first.FightStarted);
+        Assert.Equal(1, fight.NormalizedHealth, 3);
+
+        first.Vitals.Damage(new DamageEntry(AttackProperties.Damage, OpenMagicka.Gameplay.Spells.Elements.Earth, 500, 1));
+        Fire(scene, "spawn");                                                                     // a replay's spawn: a whole one again
+        world.Tick(Tick);
+        var second = made[1];
+        Assert.DoesNotContain(first, world.Entities.Entities);
+        Assert.DoesNotContain(first.Head, world.Entities.Entities);
+        Assert.Contains(second, world.Entities.Entities);
+        Assert.Same(second, named.Boss);
+        Assert.Equal(1000, named.HitPoints);
+        Assert.Single(fight.Bosses);
+
+        Fire(scene, "go");
+        second.Vitals.Damage(new DamageEntry(AttackProperties.Damage, OpenMagicka.Gameplay.Spells.Elements.Earth, 2000, 1));
+        scene.Update(Tick);
+        Assert.True(fight.Dead);
+    }
+
+    [Fact]
     public void APropBossTheGameLacks_FailsTheLoading()
     {
         using var world = World();
