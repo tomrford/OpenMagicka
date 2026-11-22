@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 
 namespace OpenMagicka.Tests.Engine;
 
-/// <summary>Our prebuilt FNA3D (native/README.md) must match the submodules and patches it records.</summary>
+/// <summary>Our prebuilt FNA3D and FAudio (native/README.md) must match the submodules and patches they record.</summary>
 public class NativeForkTests
 {
     private static readonly string Root = FindRoot();
@@ -20,11 +20,11 @@ public class NativeForkTests
         throw new DirectoryNotFoundException("the repository root was not found");
     }
 
-    private static Dictionary<string, string> Recorded(string platform) =>
-        File.ReadAllLines(Path.Combine(Root, "native", platform, "SOURCE.txt"))
+    private static Dictionary<string, string> Recorded(string platform, string record = "SOURCE.txt") =>
+        File.ReadAllLines(Path.Combine(Root, "native", platform, record))
             .Select(line => line.Trim())
             .Where(line => line.StartsWith("FNA3D ", StringComparison.Ordinal) || line.StartsWith("MojoShader", StringComparison.Ordinal)
-                || line.Contains(" sha256 ", StringComparison.Ordinal))
+                || line.StartsWith("FAudio ", StringComparison.Ordinal) || line.Contains(" sha256 ", StringComparison.Ordinal))
             .Select(line => line.Split(' '))
             .ToDictionary(parts => parts[0], parts => parts[^1]);
 
@@ -78,5 +78,18 @@ public class NativeForkTests
         Assert.NotEmpty(patches);
         Assert.All(patches, patch => Assert.Equal(Sha256(patch), recorded[directory + "/" + Path.GetFileName(patch)]));
         Assert.Equal(patches.Length, recorded.Keys.Count(k => k.StartsWith(directory + "/", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void TheWindowsFAudio_WasMadeFromTheSubmoduleFnaPins_WithEveryPatch_AndIsTheShippedLibrary()
+    {
+        var recorded = Recorded("win-x64", "FAudio.SOURCE.txt");
+        var patches = Directory.GetFiles(Path.Combine(Root, "native", "patches", "FAudio"), "*.patch");
+
+        Assert.Equal(Head("lib/FNA/lib/FAudio"), recorded["FAudio"]);
+        Assert.NotEmpty(patches);
+        Assert.All(patches, patch => Assert.Equal(Sha256(patch), recorded["FAudio/" + Path.GetFileName(patch)]));
+        Assert.Equal(patches.Length, recorded.Keys.Count(k => k.StartsWith("FAudio/", StringComparison.Ordinal)));
+        Assert.Equal(Sha256(Path.Combine(Root, "native", "win-x64", "FAudio.dll")), recorded["FAudio.dll"]);
     }
 }

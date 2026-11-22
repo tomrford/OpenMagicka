@@ -1,0 +1,32 @@
+name: Native
+
+# Builds our FAudio for Windows x64 (tools/build_faudio.ps1, native/README.md) on GitHub's Windows runners, and keeps
+# native/win-x64/FAudio.dll and its record as the run's artifact, to be committed. A push that changes the script or
+# the patches runs it; so can a run by hand.
+on:
+  push:
+    paths:
+      - tools/build_faudio.ps1
+      - native/patches/FAudio/**
+      - .github/workflows/native.yml
+  workflow_dispatch:
+
+jobs:
+  faudio:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build FAudio
+        shell: pwsh
+        run: ./tools/build_faudio.ps1
+
+      - name: Keep the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: faudio-win-x64
+          path: |
+            native/win-x64/FAudio.dll
+            native/win-x64/FAudio.SOURCE.txt
