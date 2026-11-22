@@ -21,16 +21,20 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # On Windows, the FNA native libraries (as the release workflow takes them) give our FAudio
-      # the SDL3 it runs on, so OwnFAudioTests checks it. Elsewhere the tests need no native
-      # libraries. Tests that read the game's content run only when MAGICKA_DIR is set and are
-      # skipped here.
-      - name: Fetch the FNA native libraries
+      # On Windows the tests load our FAudio (native/README.md), which runs on SDL3: SDL's own
+      # release, checked against a known hash, so OwnFAudioTests checks it. Elsewhere the tests
+      # need no native libraries. Tests that read the game's content run only when MAGICKA_DIR is
+      # set and are skipped here.
+      - name: Fetch SDL3
         if: runner.os == 'Windows'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: sh tools/fetch_fnalibs.sh 39715067086
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'SDL3-3.4.18-win32-x64.zip'
+          Invoke-WebRequest 'https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-3.4.18-win32-x64.zip' -OutFile $zip
+          if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne '75C2C0FC74E7D1206AAEDC22893A35887332F4F85F5C8B74FDDC10D177985F2C') { throw 'SDL3 does not have the expected hash' }
+          $dir = Join-Path $env:RUNNER_TEMP 'sdl3'
+          Expand-Archive $zip -DestinationPath $dir
+          "Sdl3Dll=$(Join-Path $dir 'SDL3.dll')" >> $env:GITHUB_ENV
 
       - name: Build tests
         run: dotnet build tests/OpenMagicka.Tests -c Release

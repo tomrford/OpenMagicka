@@ -57,6 +57,7 @@ try {
         Expand-Archive $zip -DestinationPath $work
         $SdlDevel = Join-Path $work "SDL3-$SdlVersion"
     }
+    $SdlDevel = (Resolve-Path $SdlDevel).Path   # CMake takes absolute paths only
     $sdlHeader = Join-Path $SdlDevel 'include/SDL3/SDL_version.h'
     $sdlLibrary = Join-Path $SdlDevel 'lib/x64/SDL3.lib'
     if (-not ((Test-Path $sdlHeader) -and (Test-Path $sdlLibrary))) { throw "$SdlDevel is not an SDL3 development folder for Visual C++" }
