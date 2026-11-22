@@ -199,7 +199,7 @@ public sealed partial class Jormungandr
                 }
                 timer -= dt * Clock.Speed;                                    // ours: as fast as the leap ran, on its clip's time
                 orientation = Matrix4x4.CreateRotationX(ToRadians(Sweep(dt))) * orientation;   // the leap played back
-                if (timer <= Warning)
+                if (timer <= Warning && Clock.Speed > 0)                     // frozen, it waits (even as a heal lengthens the warning)
                 {
                     Change(States.Underground);
                 }

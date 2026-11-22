@@ -67,8 +67,8 @@ public abstract class Boss : Entity
 
     public override bool IsRemovable => withdrawn;
 
-    /// <summary>Its zones and bodies: entities of their own, in the manager while it is.</summary>
-    public IReadOnlyList<Entity> Parts => parts;
+    /// <summary>Its zones and bodies: entities of their own, which the manager takes in with it.</summary>
+    public override IReadOnlyList<Entity> Parts => parts;
 
     /// <summary>A part to add with it (made before it is added).</summary>
     protected T Part<T>(T part) where T : Entity
@@ -111,20 +111,6 @@ public abstract class Boss : Entity
 
     /// <summary>Raises a presentation cue for the engine.</summary>
     protected void RaiseCue(Animation.AnimationCue cue) => Manager?.RaiseCue(this, cue);
-
-    /// <summary>Its parts come in with it, all or none (a level without room for them all takes none, nor the boss).</summary>
-    protected internal override void OnAdded()
-    {
-        var manager = Manager!;
-        if (manager.Entities.Count + parts.Count > EntityManager.Capacity)
-        {
-            throw new InvalidOperationException($"the level has no room for the boss's {parts.Count} parts");
-        }
-        foreach (var part in parts)
-        {
-            manager.Add(part);
-        }
-    }
 
     /// <summary>The entities it takes in the level, itself with its parts.</summary>
     public int Size => 1 + parts.Count;

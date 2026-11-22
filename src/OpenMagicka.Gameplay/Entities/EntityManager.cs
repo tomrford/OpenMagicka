@@ -94,7 +94,10 @@ public sealed partial class EntityManager
 
     internal void RaiseScriptTrigger(Entity source, int trigger) => ScriptTrigger?.Invoke(source, trigger);
 
-    /// <summary>Adds an entity on the server, which gives it the next id; an entity already in keeps its own.</summary>
+    /// <summary>
+    /// Adds an entity on the server, which gives it the next id, and its parts after it (a boss's), all or none: with no
+    /// room for them all, nothing comes in. An entity already in keeps its own.
+    /// </summary>
     public NetId Add(Entity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
@@ -102,13 +105,22 @@ public sealed partial class EntityManager
         {
             return entity.Id;
         }
+        var parts = entity.Parts;
+        if (parts.Count > 0 && (entities.Count + 1 + parts.Count > Capacity || parts.Any(p => p.Manager is not null || p.Parts.Count > 0)))
+        {
+            throw new InvalidOperationException($"the manager has no room for the entity and its {parts.Count} parts, or a part is taken");
+        }
         var id = new NetId(lastId + 1);
         if (id.Value >= LocalIds)
         {
             throw new InvalidOperationException("the server's ids are used up");
         }
-        lastId = id.Value;                                                    // taken first, and kept: an entity may add its parts as it comes in
         Admit(entity, id);
+        lastId = id.Value;
+        foreach (var part in parts)
+        {
+            Add(part);
+        }
         return id;
     }
 
@@ -125,8 +137,8 @@ public sealed partial class EntityManager
             throw new InvalidOperationException("the local ids are used up");
         }
         var id = new NetId(lastLocalId + 1);
-        lastLocalId = id.Value;
         Admit(entity, id);
+        lastLocalId = id.Value;
         return id;
     }
 
@@ -163,7 +175,6 @@ public sealed partial class EntityManager
         (entity.Id, entity.Manager) = (id, this);
         entities.Add(entity);
         byId.Add(id, entity);
-        var named = entity.UniqueId != 0 ? byName.GetValueOrDefault(entity.UniqueId) : null;
         if (entity.UniqueId != 0)
         {
             byName[entity.UniqueId] = entity;
@@ -176,25 +187,7 @@ public sealed partial class EntityManager
         {
             Minds.Add(mind);
         }
-        try
-        {
-            entity.OnAdded();
-        }
-        catch
-        {
-            var index = entities.IndexOf(entity);                             // it never came in: nor what it brought in with it
-            foreach (var added in entities.Skip(index).Reverse().ToList())
-            {
-                Unregister(added);
-                (added.Manager, added.Id) = (null, NetId.None);
-            }
-            entities.RemoveRange(index, entities.Count - index);
-            if (named is not null)
-            {
-                byName[entity.UniqueId] = named;                              // the name back with the one that had it
-            }
-            throw;
-        }
+        entity.OnAdded();
     }
 
     public bool Contains(Entity entity) => entity is not null && ReferenceEquals(entity.Manager, this);
