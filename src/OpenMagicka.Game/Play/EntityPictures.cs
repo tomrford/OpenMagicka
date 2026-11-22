@@ -11,13 +11,16 @@ namespace OpenMagicka.Game.Play;
 
 /// <summary>
 /// A model to draw this tick: its asset, its place, a skinned one's bones (in the world already), its tint, and which of
-/// its batches (by their order, a bit each; all by default), and a glow its skinned material is drawn with instead of its own.
+/// its batches (by their order, a bit each; all by default), a glow its skinned material is drawn with instead of its own,
+/// how much of its damage map shows (0 to 1) and the white of a blow's flash (0 to 1).
 /// </summary>
-public readonly record struct DrawnModel(string Asset, Matrix4x4 World, Matrix4x4[]? Bones, Vector3 Tint, int Parts = -1, float? Emissive = null);
+public readonly record struct DrawnModel(string Asset, Matrix4x4 World, Matrix4x4[]? Bones, Vector3 Tint, int Parts = -1, float? Emissive = null,
+    float Wounds = 0, float Flash = 0);
 
 /// <summary>
 /// What of the world is drawn as models (logic thread): the characters posed by their bones (none yet:
-/// at their root) with the items in their hands, the named bosses above the ground, posed by theirs, the physics
+/// at their root) with the items in their hands, the named bosses above the ground, posed by theirs (wounded, flashing as
+/// they are struck, icy while frozen), the physics
 /// props, the items lying about, the books of magick, the debris and the missiles. What has no model (or none the
 /// looks know) is left out.
 /// </summary>
@@ -46,7 +49,8 @@ public static class EntityPictures
                     Add(character, looks, into);
                     break;
                 case Boss { IsVisible: true } boss:
-                    into.Add(new DrawnModel(boss.Model, boss.RootTransform, boss.BoneTransforms.ToArray(), Vector3.One));
+                    into.Add(new DrawnModel(boss.Model, boss.RootTransform, boss.BoneTransforms.ToArray(),
+                        boss.Vitals.Has(Gameplay.Combat.StatusEffects.Frozen) ? FrozenTint : Vector3.One, Wounds: boss.Wounds, Flash: boss.Flash));
                     break;
                 case PhysicsProp prop when looks(prop.Template) is { } look:
                     into.Add(new DrawnModel(look.Asset, prop.Transform, null, look.Tint));

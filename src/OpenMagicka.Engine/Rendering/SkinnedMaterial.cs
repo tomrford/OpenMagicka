@@ -9,7 +9,8 @@ namespace OpenMagicka.Engine.Rendering;
 /// How a character's material (<c>SkinnedModelBasicEffect</c> in its model) feeds the original
 /// <c>SkinnedModelDeferredEffect</c>, as the game draws a character in the G-buffer: white diffuse
 /// colour, the base map (1) under the detail map (0) with soft-light blending, the specular map as
-/// the material map, no damage, colourising or overlay effects. The bones are set by the renderer.
+/// the material map, its damage maps bound but no damage shown, no colourising or override colour. The bones, and
+/// a model's own damage and flash (a boss's), are set by the renderer.
 /// </summary>
 public static class SkinnedDeferredMaterial
 {
@@ -40,6 +41,8 @@ public static class SkinnedDeferredMaterial
             material.DiffuseMap1Enabled ? material.DiffuseMap1.External : null,
             material.SpecularMapEnabled ? material.SpecularMap.External : null,
             material.NormalMapEnabled ? material.NormalMap.External : null,
+            material.DamageMap0Enabled ? material.DamageMap0.External : null,
+            material.DamageMap1Enabled ? material.DamageMap1.External : null,
         }.OfType<ExternalReference>();
     }
 
@@ -59,12 +62,13 @@ public static class SkinnedDeferredMaterial
         effect.SetValue("UseSoftLightBlend", material.UseSoftLightBlend);
         effect.SetValue("FresnelPower", 4f);
         effect.SetValue("Colorize", Vector4.Zero);
-        effect.SetValue("DamageMap0Enabled", false);
-        effect.SetValue("DamageMap1Enabled", false);
+        effect.SetValue("OverrideColor", new Vector4(1, 1, 1, 0));
         Map("DiffuseMap0", "DiffuseMap0Enabled", material.DiffuseMap0Enabled, material.DiffuseMap0);
         Map("DiffuseMap1", "DiffuseMap1Enabled", material.DiffuseMap1Enabled, material.DiffuseMap1);
         Map("MaterialMap", "SpecularMapEnabled", material.SpecularMapEnabled, material.SpecularMap);
         Map("NormalMap", "NormalMapEnabled", material.NormalMapEnabled, material.NormalMap);
+        Map("DamageMap0", "DamageMap0Enabled", material.DamageMap0Enabled, material.DamageMap0);
+        Map("DamageMap1", "DamageMap1Enabled", material.DamageMap1Enabled, material.DamageMap1);
 
         void Map(string name, string flag, bool enabled, ContentRef<Texture2DContent> map)
         {

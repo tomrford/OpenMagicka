@@ -24,9 +24,9 @@ public class SkinnedMaterialTests
 
     private static ContentRef<Texture2DContent> Ref(string path) => ContentRef<Texture2DContent>.FromExternal(new ExternalReference(path));
 
-    private static SkinnedModelBasicEffectContent Crusader(bool baseMap = true) => new(
-        0, 0.25f, new Vector3(0.5f), 0.75f, 20, 0.6f, true, true, baseMap, true, false, false, false,
-        Ref("details"), Ref("base"), Ref("spec"), default, default, default);
+    private static SkinnedModelBasicEffectContent Crusader(bool baseMap = true, bool wounds = false) => new(
+        0, 0.25f, new Vector3(0.5f), 0.75f, 20, 0.6f, true, true, baseMap, true, wounds, false, false,
+        Ref("details"), Ref("base"), Ref("spec"), wounds ? Ref("wounds") : default, default, default);
 
     [Fact]
     public void Apply_SetsTheMaterial_AsTheOriginalDrawsACharacter()
@@ -42,6 +42,7 @@ public class SkinnedMaterialTests
         Assert.Equal(Vector4.Zero, parameters.Set["Colorize"]);
         Assert.Equal(false, parameters.Set["DiffuseMap0Enabled"]);   // nothing was bound (lookup gave null)
         Assert.Equal(false, parameters.Set["DamageMap0Enabled"]);
+        Assert.Equal(new Vector4(1, 1, 1, 0), parameters.Set["OverrideColor"]);                 // no flash
     }
 
     [Fact]
@@ -58,5 +59,6 @@ public class SkinnedMaterialTests
         Assert.Equal(["base", "details", "spec"], asked.OfType<string>().Order(StringComparer.Ordinal));
         Assert.Equal(["base", "details", "spec"], SkinnedDeferredMaterial.References(Crusader()).Select(r => r.Path).Order(StringComparer.Ordinal));
         Assert.Equal(["details", "spec"], SkinnedDeferredMaterial.References(Crusader(baseMap: false)).Select(r => r.Path).Order(StringComparer.Ordinal));
+        Assert.Contains("wounds", SkinnedDeferredMaterial.References(Crusader(wounds: true)).Select(r => r.Path));   // a boss's damage map
     }
 }
