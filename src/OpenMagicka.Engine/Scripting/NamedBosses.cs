@@ -52,6 +52,11 @@ public sealed class NamedBoss(string name, int size, Func<ScriptScene, Matrix4x4
         {
             return;
         }
+        if (!scene.IsEntered)
+        {
+            waiting = null;                                                   // its scene was left: the spawn goes with it
+            return;
+        }
         var manager = scene.World.Entities;
         if (manager.Entities.Count + size > EntityManager.Capacity)
         {

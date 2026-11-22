@@ -77,8 +77,26 @@ public abstract class Boss : Entity
         return part;
     }
 
-    /// <summary>It leaves the world at the end of the frame, with its parts (its fight ended, or a new one is made).</summary>
-    public void Withdraw() => withdrawn = true;
+    /// <summary>
+    /// It leaves the world at the end of the frame, with its parts (its fight ended, or a new one is made); till then it
+    /// does nothing more, its zones and bodies are parked, and it is not drawn.
+    /// </summary>
+    public void Withdraw()
+    {
+        withdrawn = true;
+        foreach (var part in parts)
+        {
+            switch (part)
+            {
+                case BossZone zone:
+                    zone.Park();
+                    break;
+                case BossBody body:
+                    body.Park();
+                    break;
+            }
+        }
+    }
 
     /// <summary>
     /// A hit on one of its zones (<paramref name="zone"/>): the boss decides whether it takes it at all, then by the rules
@@ -102,6 +120,10 @@ public abstract class Boss : Entity
     /// <summary>The flash fades; then the boss's own frame.</summary>
     public sealed override void Update(float dt)
     {
+        if (withdrawn)
+        {
+            return;
+        }
         flashTimer = MathF.Max(flashTimer - dt, 0);
         Think(dt);
     }

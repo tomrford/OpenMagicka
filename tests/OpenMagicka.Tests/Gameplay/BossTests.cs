@@ -158,8 +158,12 @@ public class BossTests
         world.Tick(Tick);
         Assert.Equal(1, boss.Frames);
 
+        boss.Show(new Vector3(0, 1, 0));
         boss.Withdraw();
+        Assert.False(boss.Head.IsPlaced);                                                       // parked at once
+        Assert.False(boss.Spine.IsPlaced);
         world.Tick(Tick);
+        Assert.Equal(1, boss.Frames);                                                           // its last frame is not run
         Assert.Empty(world.Entities.Entities);
         Assert.True(boss.Head.Body.IsRemoved);
         Assert.Null(world.Physics.CastSegment(new Vector3(1, 5, 3), new Vector3(1, -5, 3))?.Body);   // the body went with it: the floor
