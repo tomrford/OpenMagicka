@@ -163,6 +163,7 @@ public sealed partial class EntityManager
         (entity.Id, entity.Manager) = (id, this);
         entities.Add(entity);
         byId.Add(id, entity);
+        var named = entity.UniqueId != 0 ? byName.GetValueOrDefault(entity.UniqueId) : null;
         if (entity.UniqueId != 0)
         {
             byName[entity.UniqueId] = entity;
@@ -181,9 +182,17 @@ public sealed partial class EntityManager
         }
         catch
         {
-            entities.Remove(entity);                                          // it never came in: none of it stays registered
-            Unregister(entity);
-            (entity.Manager, entity.Id) = (null, NetId.None);
+            var index = entities.IndexOf(entity);                             // it never came in: nor what it brought in with it
+            foreach (var added in entities.Skip(index).Reverse().ToList())
+            {
+                Unregister(added);
+                (added.Manager, added.Id) = (null, NetId.None);
+            }
+            entities.RemoveRange(index, entities.Count - index);
+            if (named is not null)
+            {
+                byName[entity.UniqueId] = named;                              // the name back with the one that had it
+            }
             throw;
         }
     }

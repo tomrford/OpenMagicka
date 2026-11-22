@@ -12,9 +12,11 @@ namespace OpenMagicka.Engine.Scripting;
 /// one (full, or stepping) keeps the one it had, and tries again each frame. Its hit points and death are its entity's;
 /// with none it is not dead.
 /// </summary>
-public sealed class NamedBoss(string name, Func<ScriptScene, Matrix4x4, Boss> make) : IFightBoss
+/// <param name="size">The entities a boss takes in the level, itself with its parts (the room it needs).</param>
+public sealed class NamedBoss(string name, int size, Func<ScriptScene, Matrix4x4, Boss> make) : IFightBoss
 {
     private readonly Func<ScriptScene, Matrix4x4, Boss> make = make ?? throw new ArgumentNullException(nameof(make));
+    private readonly int size = size > 0 ? size : throw new ArgumentOutOfRangeException(nameof(size), size, "must be positive");
 
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
@@ -51,10 +53,8 @@ public sealed class NamedBoss(string name, Func<ScriptScene, Matrix4x4, Boss> ma
             return;
         }
         var manager = scene.World.Entities;
-        var boss = make(scene, at);
-        if (manager.Entities.Count + boss.Size > EntityManager.Capacity)
+        if (manager.Entities.Count + size > EntityManager.Capacity)
         {
-            manager.Discard(boss);
             if (Boss is { Manager: not null, IsRemovable: false })
             {
                 Console.Error.WriteLine($"boss: the level is full; '{Name}' stays as it was");
@@ -66,8 +66,18 @@ public sealed class NamedBoss(string name, Func<ScriptScene, Matrix4x4, Boss> ma
             }
             return;
         }
-        Boss?.Withdraw();
-        manager.Add(boss);
+        var boss = make(scene, at);
+        try
+        {
+            manager.Add(boss);
+        }
+        catch (InvalidOperationException)
+        {
+            manager.Discard(boss);                                            // no room after all: the old one stays
+            waiting = null;
+            return;
+        }
+        Boss?.Withdraw();                                                     // the old one leaves only once the new one is in
         (Boss, waiting) = (boss, null);
     }
 
@@ -107,7 +117,7 @@ public static class NamedBosses
                 {
                     return null;
                 }
-                return new NamedBoss(name, (scene, at) => new Jormungandr(scene.World.Physics, new BossPose(model.Skeleton, model.Clips), at,
+                return new NamedBoss(name, Jormungandr.TakesUp, (scene, at) => new Jormungandr(scene.World.Physics, new BossPose(model.Skeleton, model.Clips), at,
                     new Random(scene.Random.Next())));
             default:
                 return null;

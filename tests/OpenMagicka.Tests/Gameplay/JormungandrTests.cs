@@ -6,6 +6,7 @@ using OpenMagicka.Gameplay.Characters;
 using OpenMagicka.Gameplay.Combat;
 using OpenMagicka.Gameplay.Entities;
 using OpenMagicka.Gameplay.Spells;
+using OpenMagicka.Gameplay.Spells.Effects;
 using static OpenMagicka.Tests.Gameplay.CharacterTests;
 using States = OpenMagicka.Gameplay.Bosses.Jormungandr.States;
 
@@ -361,7 +362,7 @@ public class JormungandrTests
         arena.Run(serpent.Warning + 0.2f);
         Assert.True(serpent.Head.IsPlaced);
         var head = serpent.Head.Position;
-        var shield = new OpenMagicka.Gameplay.Spells.Effects.SpellShield(arena.World.Physics, null, ShieldShape.Sphere,
+        var shield = new SpellShield(arena.World.Physics, null, ShieldShape.Sphere,
             head + new Vector3(3, 0, 0), Vector3.UnitZ, 3.5f, 1000);
         arena.World.Entities.Add(shield);
 
@@ -381,5 +382,62 @@ public class JormungandrTests
 
         arena.Serpent.Withdraw();
         Assert.False(effect.IsOn);
+    }
+
+    [Fact]
+    public void ItTakesUpWhatItsFightMakesRoomFor()
+    {
+        using var arena = new Arena();
+        Assert.Equal(Jormungandr.TakesUp, arena.Serpent.Size);
+    }
+
+    [Fact]
+    public void ADiscShieldsRim_IsRammed_AndAShieldGoingDownIsNot()
+    {
+        foreach (var down in new[] { false, true })
+        {
+            using var arena = new Arena(new Dice(0.5, 0.5, 0.5, 0.1), new Vector3(3, 0.9f, 2));
+            var serpent = arena.Serpent;
+            serpent.FightStarted = true;
+            arena.RunUntil(States.Risen);
+            arena.Run(serpent.Warning + 0.2f);
+            var head = serpent.Head.Position;
+            var round = 55 * MathF.PI / 180;                                                       // the head 55° round from the disc's facing, its rim at 45°
+            var shield = new SpellShield(arena.World.Physics, null, ShieldShape.Disc, head - 3 * new Vector3(MathF.Cos(round), 0, MathF.Sin(round)), Vector3.UnitX, 3,
+                800);
+            arena.World.Entities.Add(shield);
+            if (down)
+            {
+                shield.Kill();
+            }
+            var off = shield.ShellDistance(head, out _);
+            Assert.InRange(off, 0.01f, Jormungandr.HeadRadius);
+
+            arena.Run(2 * Tick);
+            Assert.Equal(down ? 10000 : 10000 - Jormungandr.RamDamage, serpent.HitPoints);
+        }
+    }
+
+    [Fact]
+    public void Frozen_InItsRecoil_ItWaitsThere()
+    {
+        using var arena = new Arena(new Dice(0.5, 0.5, 0.5, 0.99), new Vector3(0, 0.9f, 0));
+        var serpent = arena.Serpent;
+        serpent.FightStarted = true;
+        arena.RunUntil(States.Leap);
+        arena.Run(serpent.Warning + 1);
+        serpent.Head.Damage(Blow(300), null, serpent.Head.Position);
+        arena.RunUntil(States.HitLeap, limit: 1);
+        while (!(serpent.Clock.Clip?.Name == Jormungandr.Clips.Recoil && serpent.Clock.NormalizedTime > 0.7f))
+        {
+            arena.Run(Tick);
+        }
+        serpent.Vitals.AddStatus(StatusEffect.Create(StatusEffects.Frozen, 0, 3));
+        arena.Run(Tick);
+        var root = serpent.Orientation;
+
+        arena.Run(3);
+        Assert.Equal(States.HitLeap, serpent.State);
+        Assert.Equal(root, serpent.Orientation);
     }
 }

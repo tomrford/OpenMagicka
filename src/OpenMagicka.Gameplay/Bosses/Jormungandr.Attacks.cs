@@ -329,18 +329,21 @@ public sealed partial class Jormungandr
     }
 
     /// <summary>
-    /// Whether the head touches an entity, and where: a sphere or disc shield by its shell (a segment through the head
-    /// towards the shell's centre), anything else by its own shape about the head's centre.
+    /// Whether the head touches an entity, and where: a sphere or disc shield by its shell (its rim too), anything else by
+    /// its own shape about the head's centre. A shield going down is touched no more.
     /// </summary>
     private static bool HeadTouches(Entity entity, Vector3 at, out Vector3 hit)
     {
-        if (entity is SpellShield { Shape: not ShieldShape.Wall } shield)
+        switch (entity)
         {
-            var outward = at - shield.Position;
-            var way = outward.LengthSquared() > 1e-12f ? Vector3.Normalize(outward) : Vector3.UnitY;
-            return shield.SegmentIntersect(new Segment(at + way * HeadRadius, -2 * HeadRadius * way), 0, out hit);
+            case SpellShield { IsPassable: true }:
+                hit = default;
+                return false;
+            case SpellShield { Shape: not ShieldShape.Wall } shield:
+                return shield.ShellDistance(at, out hit) <= HeadRadius;
+            default:
+                return entity.SegmentIntersect(new Segment(at, Vector3.Zero), HeadRadius, out hit);
         }
-        return entity.SegmentIntersect(new Segment(at, Vector3.Zero), HeadRadius, out hit);
     }
 
     private bool IsOwn(Entity entity) => ReferenceEquals(entity, this) || Parts.Contains(entity);

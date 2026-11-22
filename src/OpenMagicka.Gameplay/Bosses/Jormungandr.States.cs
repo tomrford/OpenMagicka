@@ -197,7 +197,7 @@ public sealed partial class Jormungandr
                 {
                     return;
                 }
-                timer -= dt;
+                timer -= dt * Clock.Speed;                                    // ours: as fast as the leap ran, on its clip's time
                 orientation = Matrix4x4.CreateRotationX(ToRadians(Sweep(dt))) * orientation;   // the leap played back
                 if (timer <= Warning)
                 {
@@ -304,7 +304,7 @@ public sealed partial class Jormungandr
     private void Leap(float dt)
     {
         var progress = Clock.NormalizedTime;
-        timer += dt;
+        timer += timer > Warning ? dt * Clock.Speed : dt;                     // shown, on its clip's time (ours: a frozen leap waits)
         if (!Clock.IsCrossFading && progress > WhipAt && !whipped && Manager is { } manager)
         {
             var tail = pose.Position(spine[1]);

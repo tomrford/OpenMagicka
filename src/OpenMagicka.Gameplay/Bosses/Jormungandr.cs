@@ -39,6 +39,9 @@ public sealed partial class Jormungandr : Boss
     public static readonly IReadOnlyList<string> SpineBones =
         [.. Enumerable.Range(1, 11).Reverse().Select(i => $"back{i:00}"), "center", .. Enumerable.Range(1, 12).Select(i => $"front{i:00}"), "NeckBase", "NeckMid"];
 
+    /// <summary>The entities it takes in a level: itself, its head and its spine.</summary>
+    public const int TakesUp = 3;
+
     /// <summary>Where along the spine its body counts as being (the capsule from front05).</summary>
     private const int SpineCentre = 16;
 
@@ -56,7 +59,10 @@ public sealed partial class Jormungandr : Boss
         this.pose = pose ?? throw new ArgumentNullException(nameof(pose));
         foreach (var clip in Clips.All)
         {
-            pose.Clip(clip);                                                  // a model without them is not its: before any body is made
+            if (!(pose.Clip(clip).Duration > 0) || !float.IsFinite(pose.Clip(clip).Duration))   // a model without them is not its: before any body
+            {
+                throw new InvalidDataException($"the serpent's clip {clip} has no length");
+            }
         }
         head = pose.Bone("HeadBase");
         spine = [.. SpineBones.Select(pose.Bone)];
@@ -154,10 +160,10 @@ public sealed partial class Jormungandr : Boss
         {
             Change(States.Intro);
         }
+        Clock.Speed = Vitals.Has(StatusEffects.Frozen) ? 0 : stateSpeed * (Vitals.Has(StatusEffects.Cold) ? 0.5f : 1);   // this frame's, for the states too
         CheckStagger();
         Run(dt);
-        var frozen = Vitals.Has(StatusEffects.Frozen);
-        Clock.Speed = frozen ? 0 : stateSpeed * (Vitals.Has(StatusEffects.Cold) ? 0.5f : 1);
+        Clock.Speed = Vitals.Has(StatusEffects.Frozen) ? 0 : stateSpeed * (Vitals.Has(StatusEffects.Cold) ? 0.5f : 1);   // a state's own speed from now
         if (dead)
         {
             if ((deadTimer += dt) > 1)

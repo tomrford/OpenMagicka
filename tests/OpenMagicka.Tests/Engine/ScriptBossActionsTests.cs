@@ -149,7 +149,7 @@ public class ScriptBossActionsTests
     {
         using var world = World();
         var made = new List<OpenMagicka.Tests.Gameplay.BossTests.Dummy>();
-        var named = new NamedBoss("grimnir", (scene, at) =>
+        var named = new NamedBoss("grimnir", 3, (scene, at) =>
         {
             var boss = new OpenMagicka.Tests.Gameplay.BossTests.Dummy(scene.World.Physics);
             made.Add(boss);
@@ -184,6 +184,49 @@ public class ScriptBossActionsTests
         second.Vitals.Damage(new DamageEntry(AttackProperties.Damage, OpenMagicka.Gameplay.Spells.Elements.Earth, 2000, 1));
         scene.Update(Tick);
         Assert.True(fight.Dead);
+    }
+
+    [Fact]
+    public void ANamedBossInAFullLevel_KeepsTheOneThere_AndAFirstWaitsForRoomWithoutBeingMade()
+    {
+        using var world = World();
+        var made = 0;
+        var named = new NamedBoss("grimnir", 3, (scene, at) =>
+        {
+            made++;
+            return new OpenMagicka.Tests.Gameplay.BossTests.Dummy(scene.World.Physics);
+        });
+        var scene = Fight(world, """<Trigger id="spawn" autorun="false" repeat="true"><Then><spawnBoss boss="grimnir" area="spot"/></Then></Trigger>""", named);
+        var fillers = new List<OpenMagicka.Gameplay.Characters.Character>();
+        while (world.Entities.Entities.Count < OpenMagicka.Gameplay.Entities.EntityManager.Capacity - 1)
+        {
+            fillers.Add(Spawn(world, at: new Numerics.Vector3(fillers.Count % 40, 0.9f, fillers.Count / 40)));
+        }
+
+        Fire(scene, "spawn");
+        for (var i = 0; i < 10; i++)
+        {
+            scene.Update(Tick);
+        }
+        Assert.Equal(0, made);
+        Assert.Null(named.Boss);
+        foreach (var filler in fillers.Take(5))
+        {
+            filler.Terminate();
+        }
+        world.Tick(Tick);
+        scene.Update(Tick);
+        var first = Assert.IsType<OpenMagicka.Tests.Gameplay.BossTests.Dummy>(named.Boss);
+        while (world.Entities.Entities.Count < OpenMagicka.Gameplay.Entities.EntityManager.Capacity)
+        {
+            Spawn(world, at: new Numerics.Vector3(0, 0.9f, -5));
+        }
+
+        Fire(scene, "spawn");
+        world.Tick(Tick);
+        Assert.Same(first, named.Boss);
+        Assert.Contains(first, world.Entities.Entities);
+        Assert.Equal(1, made);
     }
 
     [Fact]
