@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Numerics;
+using OpenMagicka.Gameplay.Bosses;
 using OpenMagicka.Gameplay.Characters;
 using OpenMagicka.Gameplay.Combat;
+using OpenMagicka.Gameplay.Entities;
 
 namespace OpenMagicka.Engine.Hud;
 
@@ -9,8 +11,8 @@ namespace OpenMagicka.Engine.Hud;
 public readonly record struct FloatingNumber(Vector3 At, string Text, Vector4 Colour, float Scale, float Alpha);
 
 /// <summary>
-/// The damage and heal numbers over characters' heads (docs/engine/ARCHITECTURE.md §19), read from their health each
-/// tick: a blow's number follows its target for a third of a second, adding the blows that come meanwhile, then shows
+/// The damage and heal numbers over characters' heads, and over named bosses' (docs/engine/ARCHITECTURE.md §19), read
+/// from their health each tick: a blow's number follows its target for a third of a second, adding the blows that come meanwhile, then shows
 /// 0.4 s; burning, poison, bleeding and healing add up and show once a second for 0.7 s. A number stays opaque and
 /// drops away at its very end; a big one is bigger.
 /// </summary>
@@ -32,9 +34,9 @@ public sealed class FloatingNumbers
         public Shown? Blow { get; set; }
     }
 
-    private sealed class Shown(Character? follow, Vector3 at, float value, Vector4 colour, float life, float locked)
+    private sealed class Shown(Func<Vector3>? follow, Vector3 at, float value, Vector4 colour, float life, float locked)
     {
-        public Character? Follow { get; set; } = follow;
+        public Func<Vector3>? Follow { get; set; } = follow;
         public Vector3 At { get; set; } = at;
         public float Value { get; set; } = value;
         public Vector4 Colour { get; } = colour;
@@ -43,10 +45,13 @@ public sealed class FloatingNumbers
         public float Locked { get; set; } = locked;
     }
 
-    private readonly Dictionary<Character, Watch> watched = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<Entity, Watch> watched = new(ReferenceEqualityComparer.Instance);
     private readonly List<Shown> shown = [];
-    private readonly List<Character> gone = [];
-    private readonly HashSet<Character> seen = new(ReferenceEqualityComparer.Instance);
+    private readonly List<Entity> gone = [];
+    private readonly HashSet<Entity> seen = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>What a number is read from: a character's or a boss's health, blows, statuses and head.</summary>
+    private readonly record struct Subject(Entity Entity, float Health, int Blows, StatusSet Statuses, Func<Vector3> Head);
 
     /// <summary>The most numbers shown at once (as the original's).</summary>
     public const int MaxShown = 1024;
@@ -54,51 +59,29 @@ public sealed class FloatingNumbers
     public int Count => shown.Count;
 
     /// <summary>A tick, after the world's: health changes become numbers; heals wait outside cutscenes.</summary>
-    public void Update(float dt, IEnumerable<Character> characters, bool inCutscene)
+    public void Update(float dt, IEnumerable<Character> characters, bool inCutscene, IEnumerable<Boss>? bosses = null)
     {
         ArgumentNullException.ThrowIfNull(characters);
         seen.Clear();
         foreach (var character in characters)
         {
-            seen.Add(character);
-            if (!watched.TryGetValue(character, out var watch))
-            {
-                watched[character] = new Watch(character.HitPoints, character.BlowsTaken);
-                continue;
-            }
-            var change = character.HitPoints - watch.Health;
-            var struck = character.BlowsTaken != watch.Blows;
-            (watch.Health, watch.Blows) = (character.HitPoints, character.BlowsTaken);
-            if (change < 0 && struck)
-            {
-                Blow(character, watch, -change);
-            }
-            else if (change < 0 && StatusKind(character) is { } status)
-            {
-                watch.Tally[(int)status] += -change;                          // a loss of no blow and no status (a script's) shows nothing
-            }
-            else if (change > 0)
-            {
-                watch.Tally[(int)Kind.Heal] += change;
-            }
-            watch.Clock += dt;
-            if (watch.Clock >= TallyEvery)
-            {
-                watch.Clock = 0;
-                Flush(character, watch, inCutscene);
-            }
+            Read(new Subject(character, character.HitPoints, character.BlowsTaken, character.Statuses, () => Head(character)), dt, inCutscene);
+        }
+        foreach (var boss in bosses ?? [])
+        {
+            Read(new Subject(boss, boss.HitPoints, boss.BlowsTaken, boss.Vitals.Statuses, () => boss.NumbersAt), dt, inCutscene);
         }
         gone.Clear();
-        foreach (var character in watched.Keys)
+        foreach (var entity in watched.Keys)
         {
-            if (!seen.Contains(character))
+            if (!seen.Contains(entity))
             {
-                gone.Add(character);
+                gone.Add(entity);
             }
         }
-        foreach (var character in gone)
+        foreach (var entity in gone)
         {
-            watched.Remove(character);
+            watched.Remove(entity);
         }
         for (var i = shown.Count - 1; i >= 0; i--)
         {
@@ -108,7 +91,7 @@ public sealed class FloatingNumbers
                 number.Locked -= dt;
                 if (number.Follow is { } follow)
                 {
-                    number.At = Head(follow);
+                    number.At = follow();
                 }
             }
             else if ((number.Left -= dt) <= 0)
@@ -149,18 +132,49 @@ public sealed class FloatingNumbers
         return character.Position + Vector3.UnitY * (character.Template.Length / 2 + character.Template.Radius);
     }
 
-    private void Blow(Character character, Watch watch, float amount)
+    private void Read(Subject subject, float dt, bool inCutscene)
+    {
+        seen.Add(subject.Entity);
+        if (!watched.TryGetValue(subject.Entity, out var watch))
+        {
+            watched[subject.Entity] = new Watch(subject.Health, subject.Blows);
+            return;
+        }
+        var change = subject.Health - watch.Health;
+        var struck = subject.Blows != watch.Blows;
+        (watch.Health, watch.Blows) = (subject.Health, subject.Blows);
+        if (change < 0 && struck)
+        {
+            Blow(subject, watch, -change);
+        }
+        else if (change < 0 && StatusKind(subject.Statuses) is { } status)
+        {
+            watch.Tally[(int)status] += -change;                              // a loss of no blow and no status (a script's) shows nothing
+        }
+        else if (change > 0)
+        {
+            watch.Tally[(int)Kind.Heal] += change;
+        }
+        watch.Clock += dt;
+        if (watch.Clock >= TallyEvery)
+        {
+            watch.Clock = 0;
+            Flush(subject, watch, inCutscene);
+        }
+    }
+
+    private void Blow(Subject subject, Watch watch, float amount)
     {
         if (watch.Blow is { Locked: > 0 } open)
         {
             open.Value += amount;                                             // blows within a third of a second add up
             return;
         }
-        watch.Blow = new Shown(character, Head(character), amount, Damage, BlowLife, BlowLock);
+        watch.Blow = new Shown(subject.Head, subject.Head(), amount, Damage, BlowLife, BlowLock);
         Show(watch.Blow);
     }
 
-    private void Flush(Character character, Watch watch, bool inCutscene)
+    private void Flush(Subject subject, Watch watch, bool inCutscene)
     {
         for (var kind = 0; kind < watch.Tally.Length; kind++)
         {
@@ -168,7 +182,7 @@ public sealed class FloatingNumbers
             if (amount >= 0.5f && !(kind == (int)Kind.Heal && inCutscene))
             {
                 var colour = (Kind)kind switch { Kind.Burning => Burning, Kind.Poison => Poison, Kind.Bleeding => Bleeding, _ => Heal };
-                Show(new Shown(null, Head(character), kind == (int)Kind.Heal ? -amount : amount, colour, TallyLife, 0));
+                Show(new Shown(null, subject.Head(), kind == (int)Kind.Heal ? -amount : amount, colour, TallyLife, 0));
             }
             watch.Tally[kind] = 0;
         }
@@ -182,7 +196,7 @@ public sealed class FloatingNumbers
         }
     }
 
-    private static Kind? StatusKind(Character character) =>
-        character.Statuses.Has(StatusEffects.Burning) ? Kind.Burning : character.Statuses.Has(StatusEffects.Poisoned) ? Kind.Poison
-        : character.Statuses.Has(StatusEffects.Bleeding) ? Kind.Bleeding : null;
+    private static Kind? StatusKind(StatusSet statuses) =>
+        statuses.Has(StatusEffects.Burning) ? Kind.Burning : statuses.Has(StatusEffects.Poisoned) ? Kind.Poison
+        : statuses.Has(StatusEffects.Bleeding) ? Kind.Bleeding : null;
 }

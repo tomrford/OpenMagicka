@@ -86,7 +86,7 @@ public sealed partial class DeferredRenderer
             {
                 var posed = instance.Bones is not null && batch.Material is SkinnedModelBasicEffectContent;   // its pose may be far from its bind pose
                 if ((posed || view.Intersects(Transformed(batch.Bounds, instance.World))) && DrawOpaque(device, instance.Model, batch, batch.World * instance.World, frame, pass,
-                    effects, instance.Tint, instance.Emissive))
+                    effects, instance.Tint, instance.Emissive, instance.Wounds, instance.Flash))
                 {
                     drawn++;
                 }
@@ -101,11 +101,13 @@ public sealed partial class DeferredRenderer
 
     /// <summary>One opaque batch at a place; false when it is not drawn with these passes (an additive one).</summary>
     private bool DrawOpaque(GraphicsDevice device, GpuLevel source, GpuBatch batch, Matrix world, DeferredFrame frame, OpaqueKind pass, OpaqueEffects effects,
-        Vector3? tint = null, float? emissive = null)
+        Vector3? tint = null, float? emissive = null, float wounds = 0, float flash = 0)
     {
         if (batch.Material is SkinnedModelBasicEffectContent character && !batch.Additive)
         {
             SkinnedDeferredMaterial.Apply(effects.Characters, character, source.TextureFor);
+            effects.Characters.SetValue("Damage", wounds);                      // its damage map shows this much (a boss's wounds)
+            effects.Characters.SetValue("OverrideColor", new Vector4(1, 1, 1, flash));   // a blow's white flash
             if (emissive is { } glow)
             {
                 effects.Characters.SetValue("EmissiveAmount", glow);

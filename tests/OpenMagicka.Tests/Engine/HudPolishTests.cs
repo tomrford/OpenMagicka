@@ -19,6 +19,24 @@ public class HudPolishTests
     }
 
     [Fact]
+    public void ABossesBlow_ShowsOverIt_AsACharactersDoes()
+    {
+        using var world = World();
+        var boss = new OpenMagicka.Tests.Gameplay.BossTests.Dummy(world.Physics);
+        world.Entities.Add(boss);
+        boss.Show(new System.Numerics.Vector3(0, 1, 0));
+        var numbers = new FloatingNumbers();
+        numbers.Update(Tick, [], false, [boss]);
+
+        boss.Head.Damage(new DamageEntry(AttackProperties.Damage, Elements.Arcane, 120, 1), null, boss.Head.Position);
+        numbers.Update(Tick, [], false, [boss]);
+
+        var number = Assert.Single(Shown(numbers));
+        Assert.Equal("120", number.Text);
+        Assert.Equal(boss.NumbersAt, number.At);
+    }
+
+    [Fact]
     public void Blows_WithinAThirdOfASecond_AddUpInOneNumber_ThatThenGoes()
     {
         using var world = World();

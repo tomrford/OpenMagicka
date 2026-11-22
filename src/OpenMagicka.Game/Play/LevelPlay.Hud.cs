@@ -65,7 +65,7 @@ public sealed partial class LevelPlay
         bossBar.Update(dt, Level.Game.BossFight.IsRunning, Level.Game.BossFight.NormalizedHealth);
         if (ShowsDamageNumbers)
         {
-            numbers.Update(dt, World.Entities.Entities.OfType<Character>(), IsInCutscene);
+            numbers.Update(dt, World.Entities.Entities.OfType<Character>(), IsInCutscene, World.Entities.Entities.OfType<Gameplay.Bosses.Boss>());
         }
         else
         {

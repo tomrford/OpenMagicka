@@ -52,7 +52,8 @@ public sealed record CharacterRimLight(float Glow, float Power, float Bias)
 /// place). The tint colours a character's skin. <see cref="Parts"/> picks which of its batches are drawn (by their order,
 /// a bit each; all by default); <see cref="Emissive"/> overrides a skinned material's glow (a mine's, as the original sets it).
 /// </summary>
-public sealed record ModelInstance(GpuLevel Model, Matrix World, Matrix[]? Bones = null, Vector3? Tint = null, int Parts = -1, float? Emissive = null)
+public sealed record ModelInstance(GpuLevel Model, Matrix World, Matrix[]? Bones = null, Vector3? Tint = null, int Parts = -1, float? Emissive = null,
+    float Wounds = 0, float Flash = 0)
 {
     /// <summary>The batches drawn of it.</summary>
     public IEnumerable<GpuBatch> Drawn => Parts == -1 ? Model.Batches : Model.Batches.Where((_, i) => i < 32 && (Parts & (1 << i)) != 0);
