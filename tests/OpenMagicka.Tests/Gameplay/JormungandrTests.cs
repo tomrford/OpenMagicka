@@ -67,7 +67,15 @@ public class JormungandrTests
             }
             Serpent = new Jormungandr(World.Physics, Model(), Matrix4x4.CreateTranslation(-5, 0, 5), dice ?? new Dice());
             World.Entities.Add(Serpent);
-            World.Entities.Cue += (_, cue) => Cues.Add(cue);
+            World.Entities.Cue += (source, cue) =>
+            {
+                Cues.Add(cue);
+                if (source is Missile && cue is SoundCue { Cue: Jormungandr.Sounds.Spit } && Launches.Count < 4 && !seen.Contains(source))
+                {
+                    seen.Add(source);
+                    Launches.Add(frame);
+                }
+            };
         }
 
         public GameWorld World { get; }
@@ -78,14 +86,27 @@ public class JormungandrTests
 
         public List<AnimationCue> Cues { get; } = [];
 
+        /// <summary>The frames each of the serpent's gobs was launched on.</summary>
+        public List<int> Launches { get; } = [];
+
+        private int frame;
+
         public IEnumerable<string> Sounds => Cues.OfType<SoundCue>().Select(c => c.Cue);
+
+        private readonly HashSet<Entity> seen = [];
 
         public void Run(float seconds)
         {
             for (var t = 0f; t < seconds - 1e-4f; t += Tick)
             {
-                World.Tick(Tick);
+                Step();
             }
+        }
+
+        private void Step()
+        {
+            frame++;
+            World.Tick(Tick);
         }
 
         /// <summary>Ticks until the serpent is in a state (at most a minute).</summary>
@@ -94,7 +115,7 @@ public class JormungandrTests
             for (var t = 0f; Serpent.State != state; t += Tick)
             {
                 Assert.True(t < limit, $"still {Serpent.State}, not {state}");
-                World.Tick(Tick);
+                Step();
             }
         }
 
@@ -191,6 +212,9 @@ public class JormungandrTests
         Assert.Contains(Jormungandr.Sounds.PreSpit, arena.Sounds);
         arena.RunUntil(States.Risen);
         Assert.Equal(4, gobs.Count);
+        var launched = arena.Launches;
+        Assert.Equal([1, 1], [launched[1] - launched[0], launched[2] - launched[1]]);           // three on three frames
+        Assert.InRange(launched[3] - launched[2], 15, 25);                                     // the rest of half a second of clip, at 1.333
         arena.RunUntil(States.Bite);                                                             // far still, but no second spit
         Assert.Equal(1, serpent.BitesLeft);
     }
@@ -309,5 +333,53 @@ public class JormungandrTests
         arena.Run(Tick);
         arena.Run(0.5f);
         Assert.Equal(time + Tick, serpent.Clock.Time, 2);
+    }
+
+    [Fact]
+    public void Frozen_MidLeap_ItsRootStandsWithItsClip()
+    {
+        using var arena = new Arena(new Dice(0.5, 0.5, 0.5, 0.99), new Vector3(0, 0.9f, 0));
+        var serpent = arena.Serpent;
+        serpent.FightStarted = true;
+        arena.RunUntil(States.Leap);
+        arena.Run(serpent.Warning + 0.5f);
+        serpent.Vitals.AddStatus(StatusEffect.Create(StatusEffects.Frozen, 0, 3));
+        arena.Run(2 * Tick);
+        var root = serpent.Orientation;
+
+        arena.Run(0.5f);
+        Assert.Equal(root, serpent.Orientation);
+    }
+
+    [Fact]
+    public void ItsHead_RamsASphereShieldByItsShell_LosingWhatTheRamCosts_AndIsStaggered()
+    {
+        using var arena = new Arena(new Dice(0.5, 0.5, 0.5, 0.1), new Vector3(3, 0.9f, 2));
+        var serpent = arena.Serpent;
+        serpent.FightStarted = true;
+        arena.RunUntil(States.Risen);
+        arena.Run(serpent.Warning + 0.2f);
+        Assert.True(serpent.Head.IsPlaced);
+        var head = serpent.Head.Position;
+        var shield = new OpenMagicka.Gameplay.Spells.Effects.SpellShield(arena.World.Physics, null, ShieldShape.Sphere,
+            head + new Vector3(3, 0, 0), Vector3.UnitZ, 3.5f, 1000);
+        arena.World.Entities.Add(shield);
+
+        arena.Run(2 * Tick);
+        Assert.Equal(10000 - Jormungandr.RamDamage, serpent.HitPoints);
+        Assert.Contains(Jormungandr.Sounds.HitObject, arena.Sounds);
+        Assert.Equal(States.HitRisen, serpent.State);
+    }
+
+    [Fact]
+    public void ItsEffects_GoWithIt()
+    {
+        using var arena = new Arena();
+        var effect = new BossEffect(arena.Serpent, Jormungandr.Effects.Tremor);
+        effect.Start(Vector3.Zero);
+        Assert.True(effect.IsOn);
+
+        arena.Serpent.Withdraw();
+        Assert.False(effect.IsOn);
     }
 }

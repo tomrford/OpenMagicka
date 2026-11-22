@@ -11,9 +11,15 @@ public sealed class BossEffect(Boss owner, string effect)
 {
     private readonly Boss owner = owner ?? throw new ArgumentNullException(nameof(owner));
 
+    /// <summary>The boss whose it is: gone with it, it is off.</summary>
+    public Boss Owner => owner;
+
     public string Effect { get; } = effect ?? throw new ArgumentNullException(nameof(effect));
 
-    public bool IsOn { get; private set; }
+    /// <summary>Whether it shows: started, not stopped, and its boss still in the world.</summary>
+    public bool IsOn => on && owner.Manager is not null && !owner.IsRemovable;
+
+    private bool on;
 
     public Vector3 Position { get; private set; }
 
@@ -25,16 +31,16 @@ public sealed class BossEffect(Boss owner, string effect)
         (Position, Direction) = (at, direction ?? Vector3.UnitX);
         if (!IsOn)
         {
-            IsOn = true;
+            on = true;
             owner.Manager?.RaiseCue(owner, new ItemEffectCue(Effect, at, Direction, Follow: true, this));
         }
     }
 
     public void Stop()
     {
-        if (IsOn)
+        if (on)
         {
-            IsOn = false;
+            on = false;
             owner.Manager?.RaiseCue(owner, new ItemEffectEndCue(this));
         }
     }

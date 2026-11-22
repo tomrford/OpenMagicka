@@ -277,8 +277,7 @@ public sealed partial class Jormungandr
         var at = Head.Position;
         foreach (var entity in manager.Query(at, HeadRadius))
         {
-            if (!entity.IsDamageable || entity is Missile || IsOwn(entity) || headHits.Remembers(entity)
-                || !entity.SegmentIntersect(new Segment(at, Vector3.Zero), HeadRadius, out var hit))
+            if (!entity.IsDamageable || entity is Missile || IsOwn(entity) || headHits.Remembers(entity) || !HeadTouches(entity, at, out var hit))
             {
                 continue;
             }
@@ -295,8 +294,7 @@ public sealed partial class Jormungandr
                     staggered = true;
                     continue;
             }
-            entity.Damage(damage, Head, hit);
-            if (entity is Character { IsDead: true } torn)
+            if (entity.Damage(damage, Head, hit).HasFlag(DamageResult.Killed) && entity is Character torn)
             {
                 torn.OverKill();
             }
@@ -328,6 +326,21 @@ public sealed partial class Jormungandr
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Whether the head touches an entity, and where: a sphere or disc shield by its shell (a segment through the head
+    /// towards the shell's centre), anything else by its own shape about the head's centre.
+    /// </summary>
+    private static bool HeadTouches(Entity entity, Vector3 at, out Vector3 hit)
+    {
+        if (entity is SpellShield { Shape: not ShieldShape.Wall } shield)
+        {
+            var outward = at - shield.Position;
+            var way = outward.LengthSquared() > 1e-12f ? Vector3.Normalize(outward) : Vector3.UnitY;
+            return shield.SegmentIntersect(new Segment(at + way * HeadRadius, -2 * HeadRadius * way), 0, out hit);
+        }
+        return entity.SegmentIntersect(new Segment(at, Vector3.Zero), HeadRadius, out hit);
     }
 
     private bool IsOwn(Entity entity) => ReferenceEquals(entity, this) || Parts.Contains(entity);

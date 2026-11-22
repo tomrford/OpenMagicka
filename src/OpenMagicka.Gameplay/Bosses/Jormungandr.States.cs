@@ -198,7 +198,7 @@ public sealed partial class Jormungandr
                     return;
                 }
                 timer -= dt;
-                orientation = Matrix4x4.CreateRotationX(ToRadians(LeapSweep / Clock.Clip!.Duration * dt)) * orientation;   // the leap played back
+                orientation = Matrix4x4.CreateRotationX(ToRadians(Sweep(dt))) * orientation;   // the leap played back
                 if (timer <= Warning)
                 {
                     Change(States.Underground);
@@ -344,7 +344,7 @@ public sealed partial class Jormungandr
         }
         riseTremor.Stop();
         (animating, drawn) = (true, true);
-        orientation = Matrix4x4.CreateRotationX(-ToRadians(LeapSweep / Clock.Clip!.Duration * dt)) * orientation;
+        orientation = Matrix4x4.CreateRotationX(-ToRadians(Sweep(dt))) * orientation;
         position = Head.Position;
         if (Clock.HasFinished)
         {
@@ -413,6 +413,10 @@ public sealed partial class Jormungandr
             Clock.CrossFade(pose.Clip(Clips.Submerge), 0.5f, loop: false);
             return;
         }
+        if (Clock.CrossFadeClip?.Name == Clips.Submerge)
+        {
+            return;                                                           // ours: going under, it no longer chooses (a frozen blend lasts)
+        }
         if (target is null)
         {
             return;
@@ -438,7 +442,7 @@ public sealed partial class Jormungandr
             Turn(towards, 1, dt);
             if (!Clock.IsCrossFading)
             {
-                spitTimer -= dt;
+                spitTimer -= dt * Clock.Speed;                                // ours: on its clip's time, so the volley keeps its shape at any speed
                 var mouth = Head.Position;
                 if (progress >= 0.375f && !sprayed)
                 {
@@ -507,6 +511,12 @@ public sealed partial class Jormungandr
         orientation.Translation = at;
         direction = Forward(orientation);
     }
+
+    /// <summary>
+    /// How far the leap turns this frame: 275° over its clip, at its clip's speed (ours: cold slows it and frozen stops
+    /// it with the clip, where the original turns on regardless).
+    /// </summary>
+    private float Sweep(float dt) => LeapSweep / Clock.Clip!.Duration * dt * Clock.Speed;
 
     private static Vector3? Flat(Vector3 v)
     {

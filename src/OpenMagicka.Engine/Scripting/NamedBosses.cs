@@ -8,8 +8,9 @@ namespace OpenMagicka.Engine.Scripting;
 /// <summary>
 /// A named boss of OpenMagicka's own code in a fight (docs/gameplay/BOSSES.md §1): each <see cref="Enter"/> makes its
 /// world entity anew at the place (the one before leaves), as the original's spawn and checkpoint replay set its boss up
-/// whole again; the fight's frame tells it whether the fight runs. Only the host makes it; a level that cannot take it
-/// (full, or stepping) keeps the one it had. Its hit points and death are its entity's; with none it is not dead.
+/// whole again; the fight's frame tells it whether the fight runs. Only the host makes it. A level that cannot take a new
+/// one (full, or stepping) keeps the one it had, and tries again each frame. Its hit points and death are its entity's;
+/// with none it is not dead.
 /// </summary>
 public sealed class NamedBoss(string name, Func<ScriptScene, Matrix4x4, Boss> make) : IFightBoss
 {
@@ -26,29 +27,53 @@ public sealed class NamedBoss(string name, Func<ScriptScene, Matrix4x4, Boss> ma
 
     public bool IsDead => Boss is { IsDead: true };
 
+    private (ScriptScene Scene, Matrix4x4 At)? waiting;
+
     public void Enter(ScriptScene scene, Matrix4x4 at)
     {
         ArgumentNullException.ThrowIfNull(scene);
-        var manager = scene.World.Entities;
-        if (!scene.IsHost || scene.World.Physics.IsStepping)
+        if (!scene.IsHost)
         {
+            return;
+        }
+        waiting = (scene, at);
+        TryEnter();
+    }
+
+    /// <summary>
+    /// The new one comes in if the level has room for it beside the old one (which leaves at the end of this frame). With
+    /// no old one in the world it waits for room; with one, that one stays as it was.
+    /// </summary>
+    private void TryEnter()
+    {
+        if (waiting is not var (scene, at) || scene.World.Physics.IsStepping || scene.World.Entities.IsBusy)
+        {
+            return;
+        }
+        var manager = scene.World.Entities;
+        var boss = make(scene, at);
+        if (manager.Entities.Count + boss.Size > EntityManager.Capacity)
+        {
+            manager.Discard(boss);
+            if (Boss is { Manager: not null, IsRemovable: false })
+            {
+                Console.Error.WriteLine($"boss: the level is full; '{Name}' stays as it was");
+                waiting = null;
+            }
+            else
+            {
+                Boss = null;                                                  // none in the world: wait for room
+            }
             return;
         }
         Boss?.Withdraw();
-        Boss = null;
-        var boss = make(scene, at);
-        if (manager.Entities.Count + 1 + boss.Parts.Count > EntityManager.Capacity)
-        {
-            Console.Error.WriteLine($"boss: the level is full; '{Name}' cannot come in");
-            manager.Discard(boss);
-            return;
-        }
         manager.Add(boss);
-        Boss = boss;
+        (Boss, waiting) = (boss, null);
     }
 
     public void Tick(bool fightRunning)
     {
+        TryEnter();
         if (Boss is { } boss)
         {
             boss.FightStarted = fightRunning;

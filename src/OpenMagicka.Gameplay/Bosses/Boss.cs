@@ -112,13 +112,22 @@ public abstract class Boss : Entity
     /// <summary>Raises a presentation cue for the engine.</summary>
     protected void RaiseCue(Animation.AnimationCue cue) => Manager?.RaiseCue(this, cue);
 
+    /// <summary>Its parts come in with it, all or none (a level without room for them all takes none, nor the boss).</summary>
     protected internal override void OnAdded()
     {
+        var manager = Manager!;
+        if (manager.Entities.Count + parts.Count > EntityManager.Capacity)
+        {
+            throw new InvalidOperationException($"the level has no room for the boss's {parts.Count} parts");
+        }
         foreach (var part in parts)
         {
-            Manager!.Add(part);
+            manager.Add(part);
         }
     }
+
+    /// <summary>The entities it takes in the level, itself with its parts.</summary>
+    public int Size => 1 + parts.Count;
 
     /// <summary>It is let go: so are the parts that never came in with it (a boss the level could not take).</summary>
     protected internal override void OnRemoved()
