@@ -26,7 +26,7 @@ game rules: `OpenMagicka.Gameplay`; physics: `OpenMagicka.Physics` (Jitter2 behi
 
 Network play: our own protocol, host authority, star topology through the host, transport behind
 an abstraction (UDP + our own lobby/relay server, Steam optional). Details:
-[ADR-0002](adr/0002-network.md).
+[ADR-0002](adr/0002-network.md); online co-op over direct IP (TCP, Tailscale or LAN): [ADR-0004](adr/0004-online-co-op.md) (proposed).
 
 ## Documents
 
@@ -39,7 +39,7 @@ an abstraction (UDP + our own lobby/relay server, Steam optional). Details:
 - [Magicks](gameplay/MAGICKS.md): unlocks, casting magicks, the boost, what each magick does
 - [Engine architecture](engine/ARCHITECTURE.md): main loop, rendering, physics, audio, input, saves
 - [Entities, AI and network](engine/ENTITIES_AI.md)
-- Decisions: [ADR-0001 Stack](adr/0001-stack.md), [ADR-0002 Network play](adr/0002-network.md), [ADR-0003 Physics](adr/0003-physics.md)
+- Decisions: [ADR-0001 Stack](adr/0001-stack.md), [ADR-0002 Network play](adr/0002-network.md), [ADR-0003 Physics](adr/0003-physics.md), [ADR-0004 Online co-op](adr/0004-online-co-op.md) (proposed)
 - [Backlog](TASKS.md): milestones and critical path; the tasks live in ChillaDesk, project OM
 
 These files are mirrored into the ChillaDesk wiki of project OM with `python tools/wiki_sync.py`;

@@ -1,6 +1,7 @@
 # ADR-0002. Network play: our own protocol, host authority, transport abstraction
 
-- **Status:** accepted
+- **Status:** accepted; the client deciding its own wizard and the UDP transport first are superseded by
+  [ADR-0004](0004-online-co-op.md) (proposed)
 - **Date:** 2026-10-23
 - **Tasks:** OM-58, OM-59, OM-30
 
