@@ -1,5 +1,6 @@
 using System.Numerics;
 using OpenMagicka.Gameplay;
+using OpenMagicka.Gameplay.Animation;
 using OpenMagicka.Gameplay.Characters;
 using OpenMagicka.Gameplay.Entities;
 using OpenMagicka.Gameplay.Spells;
@@ -25,8 +26,11 @@ public class StormMagickTests
         var foe = Animated(world, Foe, at: wizard.Position + wizard.Body.Facing * 4 + Vector3.Cross(wizard.Body.Facing, Vector3.UnitY) * 1.5f);
         Run(world, Tick);
 
+        var cues = new List<(Entity Source, AnimationCue Cue)>();
+        world.Entities.Cue += (source, cue) => cues.Add((source, cue));
         Assert.True(Cast(wizard, MagickType.Tornado));
         var whirlwind = Assert.Single(world.Entities.Entities.OfType<Whirlwind>());
+        Assert.Contains(cues, c => ReferenceEquals(c.Source, whirlwind) && c.Cue is WorldEffectCue { Effect: Whirlwind.Effect, Tie: EffectTie.Follows });
         var start = whirlwind.Position;
         Run(world, 0.5f);
         Assert.True(foe.Body.IsPushed || foe.Body.Body.Velocity.Length() > 1 || foe.IsKnockedDown, "flung");
@@ -35,6 +39,7 @@ public class StormMagickTests
         Run(world, 10);
 
         Assert.Empty(world.Entities.Entities.OfType<Whirlwind>());
+        Assert.Contains(cues, c => ReferenceEquals(c.Source, whirlwind) && c.Cue is SoundStopCue { Cue: Whirlwind.Rumble });   // its rumble with it
     }
 
     [Fact]
@@ -45,6 +50,8 @@ public class StormMagickTests
         var centre = wizard.Position + wizard.Body.Facing * 10;
         var near = Animated(world, Foe, at: centre + new Vector3(1.5f, 0, 0));
         Run(world, Tick);
+        var cues = new List<(Entity Source, AnimationCue Cue)>();
+        world.Entities.Cue += (source, cue) => cues.Add((source, cue));
 
         Assert.True(Cast(wizard, MagickType.Vortex));
         var hole = Assert.Single(world.Entities.Entities.OfType<VortexHole>());
@@ -55,5 +62,7 @@ public class StormMagickTests
         Assert.False(wizard.IsDead);
         Run(world, 30);
         Assert.Empty(world.Entities.Entities.OfType<VortexHole>());
+        Assert.Contains(cues, c => ReferenceEquals(c.Source, hole) && c.Cue is WorldEffectCue { Effect: VortexHole.Effect, Tie: EffectTie.UntilGone });
+        Assert.Contains(cues, c => ReferenceEquals(c.Source, hole) && c.Cue is SoundStopCue { Cue: VortexHole.Sound });   // its loop with it
     }
 }

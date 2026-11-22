@@ -15,8 +15,14 @@ public static class SoundBank
 /// <param name="Magnitude">The cue's magnitude variable, when the source sets one.</param>
 public sealed record SoundCue(string Cue, int Banks, Vector3 Position, Vector3 Facing, float? Magnitude = null) : AnimationCue
 {
-    /// <summary>The sound goes with its source while it plays (a spell's, from its caster); else it stays where it rose.</summary>
-    public bool Follow { get; init; }
+    /// <summary>
+    /// The sound belongs to what its source is doing (a spell's, from its caster): it stops if the source goes before
+    /// it does. Either way it stays where it rose, as the original places a spell's cues once, as they play.
+    /// </summary>
+    public bool StopsWithSource { get; init; }
+
+    /// <summary>Heard everywhere alike, not from its position (Time Warp's, as the original's).</summary>
+    public bool Flat { get; init; }
 }
 
 /// <summary>A decal on the level: where, its surface's normal, the way it faces and its scale.</summary>
@@ -26,13 +32,13 @@ public sealed record DecalCue(string Decal, Vector3 Position, Vector3 Normal, Ve
 public sealed record SoundStopCue(string Cue) : AnimationCue;
 
 /// <summary>
-/// An effect at a bone until its <see cref="EffectEndCue"/> (same character and source): an attached one follows the
-/// bone and the end stops it; a loose one stays where it began and the end stops it only if it loops or is infinite
-/// (one that plays once plays out). A looping clip can start one again before it ended: the new one replaces it.
+/// An effect at a bone: an attached one follows the bone until its <see cref="EffectEndCue"/> (same character and
+/// source), which stops it; another starts there once and plays out. A looping clip can start one again before it
+/// ended: the new one replaces it.
 /// </summary>
 public sealed record EffectCue(string Effect, string Bone, bool Attached, AnimationAction Source) : AnimationCue;
 
-/// <summary>The effect of this source ends (one never started may end too).</summary>
+/// <summary>The attached effect of this source ends (one never started may end too).</summary>
 public sealed record EffectEndCue(AnimationAction Source) : AnimationCue;
 
 /// <summary>
@@ -46,8 +52,24 @@ public sealed record FootstepCue(int Material, float Mass, Vector3 Feet, Vector3
 
 public sealed record CameraShakeCue(Vector3 Position, float Magnitude, float Duration) : AnimationCue;
 
-/// <summary>A visual effect started once at a point in the world (a magick's flash, a marker), facing a direction.</summary>
-public sealed record WorldEffectCue(string Effect, Vector3 Position, Vector3 Direction) : AnimationCue;
+/// <summary>How a world effect is tied to the entity that raised it.</summary>
+public enum EffectTie : byte
+{
+    /// <summary>Started and left to play out (a flash).</summary>
+    None,
+
+    /// <summary>Stays where it began and is stopped as its source goes (a vortex); its source's next of the same name replaces it.</summary>
+    UntilGone,
+
+    /// <summary>As <see cref="UntilGone"/>, moving with its source (a tornado's funnel).</summary>
+    Follows,
+}
+
+/// <summary>
+/// A visual effect at a point in the world (a magick's flash, a marker), facing a direction: started once, or tied to
+/// its source (<see cref="EffectTie"/>), as a looping or infinite one must be, else it would run forever.
+/// </summary>
+public sealed record WorldEffectCue(string Effect, Vector3 Position, Vector3 Direction, EffectTie Tie = EffectTie.None) : AnimationCue;
 
 /// <summary>
 /// An item's or a missile's effect (a strike's sparks, a missile's trail); a following one stays on

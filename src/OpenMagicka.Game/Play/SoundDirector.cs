@@ -33,7 +33,7 @@ public sealed partial class SoundDirector : IDisposable
     private readonly Dictionary<Entity, List<ISoundCue>> bySource = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>The sounds that go with their source (a spell's from its caster), placed with it each step.</summary>
-    private readonly Dictionary<Entity, List<ISoundCue>> following = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<Entity, List<ISoundCue>> owned = new(ReferenceEqualityComparer.Instance);   // a caster's spell sounds
     private readonly Dictionary<Item, (Entity Holder, ISoundCue Cue)> guns = new(ReferenceEqualityComparer.Instance);
     private int scene = -1;
     private bool fadingOut;
@@ -86,14 +86,14 @@ public sealed partial class SoundDirector : IDisposable
         switch (cue)
         {
             case SoundCue sound:
-                var played = Sounds.Play((SoundBanks)sound.Banks, sound.Cue, SoundPlace.At(sound.Position, sound.Facing),
+                var played = Sounds.Play((SoundBanks)sound.Banks, sound.Cue, sound.Flat ? null : SoundPlace.At(sound.Position, sound.Facing),
                     sound.Magnitude is { } magnitude ? [("Magnitude", magnitude)] : []);
                 if (played is not null)
                 {
                     (bySource.TryGetValue(source, out var list) ? list : bySource[source] = []).Add(played);
-                    if (sound.Follow)
+                    if (sound.StopsWithSource)
                     {
-                        (following.TryGetValue(source, out var followed) ? followed : following[source] = []).Add(played);
+                        (owned.TryGetValue(source, out var spells) ? spells : owned[source] = []).Add(played);
                     }
                 }
                 break;
@@ -169,24 +169,17 @@ public sealed partial class SoundDirector : IDisposable
                 bySource.Remove(source);
             }
         }
-        foreach (var (source, list) in following.ToList())
+        foreach (var (source, list) in owned.ToList())
         {
             list.RemoveAll(c => c.IsStopped);
             if (source.Manager is null)
             {
                 list.ForEach(c => c.Stop(immediate: false));                  // its caster gone mid-spell: its spell's sounds with it
-                following.Remove(source);
-                continue;
+                owned.Remove(source);
             }
-            if (list.Count == 0)
+            else if (list.Count == 0)
             {
-                following.Remove(source);
-                continue;
-            }
-            var at = SoundPlace.At(source.Position, Forward(source));         // a caster's spray, its beam: they go with it
-            foreach (var cue in list)
-            {
-                Sounds.Place(cue, at);
+                owned.Remove(source);
             }
         }
     }

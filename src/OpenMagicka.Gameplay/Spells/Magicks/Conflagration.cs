@@ -20,7 +20,7 @@ public sealed class Conflagration() : Magick(MagickType.Conflagration, SweepClip
         var sweep = new ConflagrationSweep(caster, caster.Position, caster.Body.Facing);
         manager.Add(sweep);
         manager.RaiseCue(sweep, new SoundCue(CastSound, MagickEffects.SpellsBank, sweep.Position, Vector3.UnitX));
-        manager.RaiseCue(sweep, new WorldEffectCue(ConflagrationSweep.Effect, sweep.Position, caster.Body.Facing));
+        manager.RaiseCue(sweep, new WorldEffectCue(ConflagrationSweep.Effect, sweep.Position, caster.Body.Facing, EffectTie.Follows));   // infinite: it sweeps on and ends with the wall
         return true;
     }
 }

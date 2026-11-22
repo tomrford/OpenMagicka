@@ -166,11 +166,11 @@ public sealed class NapalmStrike : Entity, IMagickEffect
             return false;
         }
         target = spot;
-        Manager?.RaiseCue(this, new WorldEffectCue(MarkerEffect, target, line));
+        Manager?.RaiseCue(this, new WorldEffectCue(MarkerEffect, target, line, EffectTie.UntilGone));
         return true;
     }
 
-    protected internal override void OnAdded() => Manager?.RaiseCue(this, new WorldEffectCue(MarkerEffect, target, line));
+    protected internal override void OnAdded() => Manager?.RaiseCue(this, new WorldEffectCue(MarkerEffect, target, line, EffectTie.UntilGone));
 
     /// <summary>Nullify ends it.</summary>
     public void End() => (passing, timer) = (true, 0);

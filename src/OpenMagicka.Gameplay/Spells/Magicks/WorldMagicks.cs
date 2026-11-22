@@ -18,8 +18,7 @@ public sealed class TimeWarp() : Magick(MagickType.TimeWarp, SelfClip)
         {
             return false;                                                     // as the original, silently
         }
-        manager.Add(new TimeWarpEffect(caster));
-        caster.RaiseCue(new SoundCue(WarpSound, MagickEffects.SpellsBank, caster.Position, caster.Body.Facing));
+        manager.Add(new TimeWarpEffect(caster));                             // its sound comes and goes with it
         return true;
     }
 }
@@ -71,14 +70,19 @@ public sealed class TimeWarpEffect : Entity, IMagickEffect
         }
     }
 
-    protected internal override void OnAdded() => level = Manager;
+    protected internal override void OnAdded()
+    {
+        level = Manager;
+        level?.RaiseCue(this, new SoundCue(TimeWarp.WarpSound, MagickEffects.SpellsBank, Caster.Position, Caster.Body.Facing) { Flat = true });
+    }
 
-    /// <summary>However it goes (a level cleared too), the level's time is given back.</summary>
+    /// <summary>However it goes (its end, Nullify, a level cleared), the level's time is given back and its sound stops, as the original's.</summary>
     protected internal override void OnRemoved()
     {
         if (level is not null)
         {
             level.TimeMultiplier = 1;
+            level.RaiseCue(this, new SoundStopCue(TimeWarp.WarpSound));
         }
     }
 }

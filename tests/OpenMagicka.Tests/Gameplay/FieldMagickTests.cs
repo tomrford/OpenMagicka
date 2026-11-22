@@ -81,9 +81,13 @@ public class FieldMagickTests
     {
         var (world, _, wizard) = NewGame();
         using var _ = world;
+        var cues = new List<(Entity Source, AnimationCue Cue)>();
+        world.Entities.Cue += (source, cue) => cues.Add((source, cue));
 
         Assert.True(Cast(wizard, MagickType.TimeWarp));
         Assert.False(Cast(wizard, MagickType.TimeWarp));                            // one at a time
+        var warp = Assert.Single(world.Entities.Entities.OfType<TimeWarpEffect>());
+        Assert.Contains(cues, c => ReferenceEquals(c.Source, warp) && c.Cue is SoundCue { Cue: TimeWarp.WarpSound });
         for (var i = 0; i < 5 * 60; i++)
         {
             world.Tick(Tick);
@@ -96,6 +100,7 @@ public class FieldMagickTests
 
         Assert.Equal(1f, world.Entities.TimeMultiplier);
         Assert.Empty(world.Entities.Entities.OfType<TimeWarpEffect>());
+        Assert.Contains(cues, c => ReferenceEquals(c.Source, warp) && c.Cue is SoundStopCue { Cue: TimeWarp.WarpSound });   // its sound with it
     }
 
     [Fact]

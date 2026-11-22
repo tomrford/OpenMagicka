@@ -37,7 +37,7 @@ public abstract class SpellEffect
         var played = SpellSounds.For(Spell, type, cast);
         foreach (var (cue, magnitude) in played)
         {
-            caster.RaiseCue(new Animation.SoundCue(cue, SpellMissiles.SpellsBank, caster.Position, caster.Body.Facing, magnitude) { Follow = true });
+            caster.RaiseCue(new Animation.SoundCue(cue, SpellMissiles.SpellsBank, caster.Position, caster.Body.Facing, magnitude) { StopsWithSource = true });
         }
         sounds = playOut ? [] : [.. played.Select(p => p.Cue)];
     }

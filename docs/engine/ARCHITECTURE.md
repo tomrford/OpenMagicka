@@ -1108,7 +1108,7 @@ touched). The impact damage rule is `OpenMagicka.Gameplay.Characters.ImpactDamag
 - The cues the original's code raises (0.0.3), beside those its data carries (animations, items, missiles, props):
   - a spell's sounds as it is cast (`SpellSounds`, the original's table): one Spells-bank cue for each element in it, at
     its magnitude, chosen by the spell's type and the cast (`_spray` forward and for every lightning cast, `_area`,
-    `_self` for a beam's self-cast, `_blast`); the spell's own (`Follow`) go with the caster and stop with the effect;
+    `_self` for a beam's self-cast, `_blast`); the spell's own (`StopsWithSource`) are placed once as they play, as the original's, and stop with the effect (or with a caster gone mid-spell);
   - a beam (each reflection too): `spell_<arcane|life>_ray_stage1` and its extra elements' sprays at its start, the
     `_ray_stage2` loop where it hits while cut short; a beam's kill bloats with `spell_arcane_ray_stage3` and bursts with
     `_stage4`;

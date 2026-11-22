@@ -16,7 +16,8 @@ public sealed class EffectStage(Task<EffectLibrary> library, EffectChannel chann
     private readonly Task<EffectLibrary> library = library ?? throw new ArgumentNullException(nameof(library));
     private readonly EffectChannel channel = channel ?? throw new ArgumentNullException(nameof(channel));
     private readonly Dictionary<long, VisualEffectInstance> running = [];
-    private readonly HashSet<long> ending = [];                              // a loop or infinite one stops after its next step
+    private readonly HashSet<long> fresh = [];                               // started in this batch
+    private readonly HashSet<long> stopping = [];                            // started and stopped in this batch: stopped after one step
     private readonly HashSet<string> missing = new(StringComparer.OrdinalIgnoreCase);
 
     public ParticlePool Pool { get; } = new();
@@ -40,6 +41,7 @@ public sealed class EffectStage(Task<EffectLibrary> library, EffectChannel chann
             return;
         }
         var effects = library.IsCompletedSuccessfully ? library.Result : null;
+        fresh.Clear();
         while (channel.Commands.TryDequeue(out var command))
         {
             Apply(effects, command);
@@ -48,7 +50,7 @@ public sealed class EffectStage(Task<EffectLibrary> library, EffectChannel chann
         foreach (var (id, effect) in running.ToList())
         {
             effect.Update(dt, Pool);
-            if (dt >= float.Epsilon && ending.Remove(id))
+            if (dt >= float.Epsilon && stopping.Remove(id))
             {
                 running.Remove(id);
                 effect.Stop();                                                // its particles fly on in the pool
@@ -70,6 +72,7 @@ public sealed class EffectStage(Task<EffectLibrary> library, EffectChannel chann
                 var instance = new VisualEffectInstance(content, seed: unchecked((int)command.Id * 7919));
                 instance.Start(ModelCache.Xna(command.World));
                 running[command.Id] = instance;
+                fresh.Add(command.Id);
                 break;
             case EffectCommandKind.Start:
                 if (command.Effect is { } name)
@@ -84,12 +87,11 @@ public sealed class EffectStage(Task<EffectLibrary> library, EffectChannel chann
             case EffectCommandKind.Particle:
                 Pool.Spawn(command.Particle);
                 break;
-            case EffectCommandKind.Stop when running.Remove(command.Id, out var stopped):
-                ending.Remove(command.Id);
-                stopped.Stop();                                               // its particles fly on in the pool
+            case EffectCommandKind.Stop when fresh.Contains(command.Id):
+                stopping.Add(command.Id);                                     // started in this same batch (a hitch): it still sprays once
                 break;
-            case EffectCommandKind.End when running.TryGetValue(command.Id, out var ended) && !ended.PlaysOut:
-                ending.Add(command.Id);                                       // started in this same batch (a hitch), it still sprays once
+            case EffectCommandKind.Stop when running.Remove(command.Id, out var stopped):
+                stopped.Stop();                                               // its particles fly on in the pool
                 break;
         }
     }

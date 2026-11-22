@@ -78,11 +78,17 @@ public sealed class Whirlwind : Entity
         return true;
     }
 
+    private EntityManager? level;
+
     protected internal override void OnAdded()
     {
+        level = Manager;
         Manager?.RaiseCue(this, new SoundCue(Rumble, MagickEffects.SpellsBank, position, heading));
-        Manager?.RaiseCue(this, new WorldEffectCue(Effect, position, heading));
+        Manager?.RaiseCue(this, new WorldEffectCue(Effect, position, heading, EffectTie.Follows));   // looping: it goes with the funnel
     }
+
+    /// <summary>Its rumble stops as it goes (its end, Nullify, a level cleared), as the original's.</summary>
+    protected internal override void OnRemoved() => level?.RaiseCue(this, new SoundStopCue(Rumble));
 
     public override void Update(float dt)
     {

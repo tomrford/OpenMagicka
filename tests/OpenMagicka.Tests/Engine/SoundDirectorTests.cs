@@ -67,18 +67,26 @@ public class SoundDirectorTests
     }
 
     [Fact]
-    public void ASpellsSound_GoesWithItsCaster_TheRestStayWhereTheyRose()
+    public void ASpellsSound_StaysWhereItRose_AndStopsIfItsCasterGoes()
     {
         var (play, audio) = Heard();
         using var _ = play;
         var avatar = play.Player.Avatar!;
 
-        Raise(play, avatar, new SoundCue("spell_fire_spray", (int)SoundBanks.Spells, new Numerics.Vector3(9, 0, 9), Numerics.Vector3.UnitX) { Follow = true });
+        Raise(play, avatar, new SoundCue("spell_fire_spray", (int)SoundBanks.Spells, new Numerics.Vector3(9, 0, 9), Numerics.Vector3.UnitX) { StopsWithSource = true });
         Raise(play, avatar, new SoundCue("chr_goblin_pain", (int)SoundBanks.Characters, new Numerics.Vector3(1, 0, 2), Numerics.Vector3.UnitX));
         play.Tick(Tick);
+        avatar.Steer(new Numerics.Vector3(1, 0, 0), walk: true);
+        for (var i = 0; i < 10; i++)
+        {
+            play.Tick(Tick);
+        }
 
-        Assert.Equal(avatar.Position, Made(audio, "spell_fire_spray").Places.Last().Position);
+        Assert.Equal(new Numerics.Vector3(9, 0, 9), Assert.Single(Made(audio, "spell_fire_spray").Places).Position);   // placed once, as the original
         Assert.Equal(new Numerics.Vector3(1, 0, 2), Assert.Single(Made(audio, "chr_goblin_pain").Places).Position);
+        Raise(play, avatar, new SoundCue("chr_goblin_pain", (int)SoundBanks.Characters, new Numerics.Vector3(1, 0, 2), Numerics.Vector3.UnitX) { Flat = true });
+        play.Tick(Tick);
+        Assert.Empty(Made(audio, "chr_goblin_pain").Places);                                             // a flat one is not placed
     }
 
     [Fact]

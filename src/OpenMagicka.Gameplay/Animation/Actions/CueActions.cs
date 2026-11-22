@@ -19,9 +19,9 @@ public sealed class PlaySound(float start, float end, string cue, int banks) : A
 }
 
 /// <summary>
-/// An effect at a bone; an attached one follows it. Either ends with the window: an attached one stops, a loose one
-/// (every one in the game's data) stays where it began and, if it loops or is infinite, stops (a gore spray from a
-/// dying troll's mouth, a wizard's charge glow), else plays out.
+/// An effect at a bone, as the original: its window's length decides, not its attach flag (read, never used). A window
+/// with a length follows the bone and stops the effect when it ends, whatever its kind (a dying troll's gore spray, a
+/// wizard's charge glow); an empty one starts it once at the bone and leaves it to play out.
 /// </summary>
 public sealed class PlayEffect(float start, float end, string effect, string bone, bool attach) : AnimationAction(start, end)
 {
@@ -29,20 +29,33 @@ public sealed class PlayEffect(float start, float end, string effect, string bon
 
     public string Bone { get; } = bone ?? throw new ArgumentNullException(nameof(bone));
 
+    /// <summary>The data's flag; as the original, it changes nothing.</summary>
     public bool Attach { get; } = attach;
+
+    /// <summary>The window has a length: the effect follows the bone and is stopped when it ends.</summary>
+    public bool Follows => End > Start;
 
     public override void Run(Character owner, bool first)
     {
         if (first)
         {
-            owner.RaiseCue(new EffectCue(Effect, Bone, Attach, this));
+            owner.RaiseCue(new EffectCue(Effect, Bone, Follows, this));
         }
     }
 
-    /// <summary>A dying character holds its death clip's last pose: its effects end there all the same.</summary>
+    /// <summary>
+    /// Ours: a clip holding its last pose (a corpse's death clip) ends a window that reaches its end; the original's
+    /// would run on till the corpse is removed.
+    /// </summary>
     public override bool EndsWithTheClip => true;
 
-    public override void Stop(Character owner) => owner.RaiseCue(new EffectEndCue(this));
+    public override void Stop(Character owner)
+    {
+        if (Follows)
+        {
+            owner.RaiseCue(new EffectEndCue(this));
+        }
+    }
 }
 
 /// <summary>A step, heard and seen only on the ground and not levitating.</summary>

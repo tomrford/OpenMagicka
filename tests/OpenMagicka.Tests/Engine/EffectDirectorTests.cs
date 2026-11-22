@@ -169,28 +169,50 @@ public class EffectDirectorTests
     }
 
     [Fact]
-    public void ALooseEffect_StaysWhereItBegan_TillItsEndCueEndsIt()
+    public void AnUnattachedEffect_StartsOnceAtTheBone_AndIsLeftToPlayOut()
     {
         using var play = Play();
         play.Start();
         var avatar = play.Player.Avatar!;
-        var gore = new PlayEffect(0, 0.2f, "gore_spray_regular", "root", attach: false);
-        Raise(play, avatar, new EffectCue("gore_spray_regular", "root", Attached: false, gore));
+        var dust = new PlayEffect(0.2f, 0, "fx_dust", "root", attach: false);
+        Raise(play, avatar, new EffectCue("fx_dust", "root", Attached: false, dust));
         play.Tick(Tick);
-        var started = Drain(play).Where(c => c.Kind == EffectCommandKind.Start).ToDictionary(c => c.Effect!, c => c);
-        var where = started["gore_spray_regular"].World;
+        var id = Assert.Single(Drain(play), c => c.Kind == EffectCommandKind.Start && c.Effect == "fx_dust").Id;
         avatar.Steer(new Numerics.Vector3(1, 0, 0), walk: true);
         for (var i = 0; i < 10; i++)
         {
             play.Tick(Tick);
         }
-        Assert.All(Drain(play).Where(c => c.Kind == EffectCommandKind.Move && c.Id == started["gore_spray_regular"].Id), c => Assert.Equal(where, c.World));
-
-        Raise(play, avatar, new EffectEndCue(gore));
+        Raise(play, avatar, new EffectEndCue(dust));
         play.Tick(Tick);
-        var ended = Drain(play);
-        Assert.Contains(ended, c => c.Kind == EffectCommandKind.End && c.Id == started["gore_spray_regular"].Id);   // the stage stops it if it loops
-        Assert.DoesNotContain(ended, c => c.Kind == EffectCommandKind.Stop);
+
+        Assert.DoesNotContain(Drain(play), c => c.Id == id);                                     // not moved, not stopped
+    }
+
+    [Fact]
+    public void ATiedWorldEffect_StopsAsItsSourceGoes_OneThatFollowsMovesWithIt()
+    {
+        using var play = Play();
+        play.Start();
+        var start = new Numerics.Vector3(1, 0, 1);
+        var funnel = new OpenMagicka.Tests.Gameplay.Thing(start);
+        play.World.Entities.Add(funnel);
+        Raise(play, funnel, new WorldEffectCue("fx_vortex", start, Numerics.Vector3.UnitY, EffectTie.UntilGone));
+        Raise(play, funnel, new WorldEffectCue("fx_funnel", start, Numerics.Vector3.UnitY, EffectTie.Follows));
+        play.Tick(Tick);
+        var started = Drain(play).Where(c => c.Kind == EffectCommandKind.Start).ToDictionary(c => c.Effect!, c => c.Id);
+        funnel.At = new Numerics.Vector3(4, 0, 1);
+        play.Tick(Tick);
+        var moves = Drain(play).Where(c => c.Kind == EffectCommandKind.Move).ToList();
+        Assert.Equal(start, Assert.Single(moves, c => c.Id == started["fx_vortex"]).World.Translation);
+        Assert.Equal(funnel.At, Assert.Single(moves, c => c.Id == started["fx_funnel"]).World.Translation);
+
+        funnel.Removed = true;
+        play.Tick(Tick);
+        play.Tick(Tick);
+        var stops = Drain(play).Where(c => c.Kind == EffectCommandKind.Stop).Select(c => c.Id).ToList();
+        Assert.Contains(started["fx_vortex"], stops);
+        Assert.Contains(started["fx_funnel"], stops);
     }
 
     [Fact]
@@ -236,13 +258,14 @@ public class EffectDirectorTests
             channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.Start, 2, "glow", Numerics.Matrix4x4.Identity));
             channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.Start, 3, "nothing", Numerics.Matrix4x4.Identity));
             channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.Start, 4, "glow", Numerics.Matrix4x4.Identity));
-            channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.End, 1, null, default));     // the puff plays out
-            channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.End, 4, null, default));     // a looping one stops
+            channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.Stop, 4, null, default));    // stopped as it started: once, then gone
 
             stage.Step(0.05f);
             Assert.Equal(2, stage.Running);
             stage.Step(0.1f);
             channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.Stop, 2, null, default));
+            stage.Step(0f);                                                                       // one already running stops at once
+            Assert.Equal(0, stage.Running);
             stage.Step(0.05f);
 
             Assert.Equal(0, stage.Running);
@@ -256,12 +279,12 @@ public class EffectDirectorTests
     }
 
     [GameContentFact]
-    public void AGoreSpray_StartedAndEndedInOneBatch_StillSpraysOnce_ThenStops()
+    public void AGoreSpray_StartedAndStoppedInOneBatch_StillSpraysOnce_ThenStops()
     {
         var channel = new EffectChannel();
         var stage = new EffectStage(Task.FromResult(EffectLibrary.Load(new ContentFileSystem(GameContent.ContentDirectory!))), channel);
         channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.Start, 1, "gore_spray_regular", Numerics.Matrix4x4.Identity));
-        channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.End, 1, null, default));     // a render hitch over its window
+        channel.Commands.Enqueue(new EffectCommand(EffectCommandKind.Stop, 1, null, default));    // a render hitch over its window
 
         stage.Step(0.05f);
 

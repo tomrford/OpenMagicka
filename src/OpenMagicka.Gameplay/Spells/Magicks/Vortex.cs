@@ -59,11 +59,17 @@ public sealed class VortexHole : Entity
     /// <summary>Closes it at once.</summary>
     public void Kill() => (mass, target) = (0, 0);
 
+    private EntityManager? level;
+
     protected internal override void OnAdded()
     {
+        level = Manager;
         Manager?.RaiseCue(this, new SoundCue(Sound, MagickEffects.SpellsBank, centre, Vector3.UnitX));
-        Manager?.RaiseCue(this, new WorldEffectCue(Effect, centre, Vector3.UnitY));
+        Manager?.RaiseCue(this, new WorldEffectCue(Effect, centre, Vector3.UnitY, EffectTie.UntilGone));   // infinite: it ends with the vortex
     }
+
+    /// <summary>Its sound (an infinite loop) stops as it goes (closed, Nullify, a level cleared), as the original's.</summary>
+    protected internal override void OnRemoved() => level?.RaiseCue(this, new SoundStopCue(Sound));
 
     public override void Update(float dt)
     {

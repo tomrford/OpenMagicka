@@ -38,11 +38,11 @@ public class AnimationCueTests
     }
 
     [Fact]
-    public void AnEffect_EndsWithItsWindow_AttachedOrNot()
+    public void AnEffectWithAWindow_FollowsItsBoneTillItEnds_OneWithoutIsStartedOnce_WhateverItsAttachFlag()
     {
         using var world = World();
-        var sonic = new PlayEffect(0, 0.5f, "brute_sonic", "root", attach: true);
-        var dust = new PlayEffect(0.2f, 0, "brute_dust", "LeftFootEnd", attach: false);
+        var sonic = new PlayEffect(0, 0.5f, "brute_sonic", "root", attach: false);
+        var dust = new PlayEffect(0.2f, 0, "brute_dust", "LeftFootEnd", attach: true);
         var brute = Acting(world, 1, sonic, dust);
         var cues = Listen(brute);
 
@@ -50,7 +50,7 @@ public class AnimationCueTests
         Run(world, 0.8f);
 
         Assert.Equal<AnimationCue>(
-            [new EffectCue("brute_sonic", "root", true, sonic), new EffectCue("brute_dust", "LeftFootEnd", false, dust), new EffectEndCue(dust), new EffectEndCue(sonic)],
+            [new EffectCue("brute_sonic", "root", true, sonic), new EffectCue("brute_dust", "LeftFootEnd", false, dust), new EffectEndCue(sonic)],
             cues);
     }
 
